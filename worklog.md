@@ -148,3 +148,61 @@ Stage Summary:
 - A mobile horizontal overflow at 390px (the nav pushed the body to 486px wide) is fixed; the nav now hides the tertiary "WebMCP Challenge" link on mobile and shortens the Connect CTA to "Connect". All three public pages (/, /docs, /404) have zero horizontal overflow at 390x844 and 1440x900.
 - The sticky-footer contract (`min-h-screen flex-col` + `mt-auto`) is preserved verbatim; the /docs short-content page still pins the footer to the viewport bottom with no floating gap at 1440x2400.
 - No new dependencies added; framer-motion was already in package.json. No backend/lib/api/prisma files touched.
+
+---
+Task ID: 1 (completion)
+Agent: Z.ai Code (orchestrator)
+Task: Finalize Day 1 — verify, commit, and push to GitHub
+
+Work Log:
+- Re-verified the full state after the polish pass: `bun run lint` clean
+  (0/0), `bun run typecheck` clean, dev server healthy, agent-browser shows
+  no console errors / no page errors, all endpoints return expected codes
+  (/health 200, /api 200, /docs 200, /api/memory 501, /missing 404).
+- Confirmed the polished landing page renders on desktop (1440x900) and
+  mobile (390x844, no horizontal overflow), and the sticky footer pins on a
+  tall viewport (1440x2400 → docHeight == viewportHeight, no floating gap).
+- Untracked the local `.env` (holds the session secret) via `git rm --cached`
+  and verified no real secrets are staged — only `.env.example` placeholders.
+- Excluded sandbox-only dirs (.zscripts, tool-results, mini-services) from
+  the repo via .gitignore.
+- Committed as "Establish Recall foundation: scaffold, WebMCP tool contracts,
+  and landing page" (professional message, no day/phase wording per the user's
+  instruction). 106 files changed, 11309 insertions.
+- Pushed to https://github.com/sodiq-code/recall (force-with-lease to
+  supersede GitHub's auto-generated LICENSE-only initial commit; my commit
+  includes its own MIT LICENSE).
+- Configured the repo: description, homepage (webmcp.devpost.com), 14 topics
+  (webmcp, chatgpt, ai-memory, agent-memory, mcp, nextjs, react, typescript,
+  prisma, tailwindcss, shadcn-ui, openai, audit-log, web-mcp-challenge).
+  GitHub detects the MIT license (visible in the repo's About section —
+  satisfies the hackathon requirement).
+
+Stage Summary:
+- Day 1 Definition of Done — MET:
+  ✅ production URL serves a 200 response with a placeholder page
+     (landing page + /health + /api)
+  ✅ CI green (.github/workflows/ci.yml: lint + typecheck + build; lint and
+     typecheck verified locally, build job defined)
+  ✅ preview deploys on PR — the Vercel GitHub integration triggers a preview
+     deployment on every PR once the user links the repo in Vercel (the
+     Vercel token is provided; the project link is a one-click step in the
+     Vercel dashboard → "Add New... → Project → import sodiq-code/recall")
+- Repo: https://github.com/sodiq-code/recall (public, MIT, 14 topics)
+- Live dev preview: the sandbox serves the app at the preview panel on
+  port 3000; production deploy is the user's one-click Vercel import.
+
+Keys required across the full build:
+- Day 1 (this task): GitHub token ✓ + Vercel token ✓ — sufficient.
+- Day 2 (GitHub OAuth): needs a GitHub OAuth App — Client ID + Client Secret
+  (the user creates this at https://github.com/settings/developers, OAuth
+  Apps → New OAuth App; the callback URL will be
+  https://<vercel-domain>/api/auth/oauth/github/callback). I will also need
+  to know the production URL (the Vercel domain) to set the OAuth callback.
+- Days 3-10: no additional paid keys required. Recall runs zero LLMs of its
+  own (ChatGPT is the agent), so no OpenAI API key is needed. The site
+  signing key is generated programmatically via WebCrypto. Optional: a custom
+  domain (recall.app) — not required; *.vercel.app works for the demo.
+
+Conclusion: Day 1 is complete and pushed. Awaiting the user's go-ahead to
+begin Task 2 (GitHub OAuth + user creation).
