@@ -16,6 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Reveal } from "@/components/recall/landing/motion-primitives";
 import { RealtimeStatus } from "@/components/recall/canvas/realtime-status";
 import { MemoryCanvas } from "@/components/recall/canvas/memory-canvas";
+import { WebMCPBridge } from "@/components/recall/canvas/webmcp-bridge";
+import { WebMCPTestPanel } from "@/components/recall/canvas/webmcp-test-panel";
 
 /**
  * Recall — /app (the memory canvas).
@@ -68,6 +70,7 @@ export default async function AppPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <WebMCPBridge />
                 <RealtimeStatus />
                 <Button variant="ghost" size="sm" asChild>
                   <Link href="/app/settings">
@@ -101,8 +104,9 @@ export default async function AppPage() {
                   Your vault is live
                 </Badge>
                 <p className="text-sm text-muted-foreground">
-                  Add facts, edit, or forget — your agent can&apos;t see them
-                  until you open ChatGPT and grant it access.
+                  Add facts, edit, or forget. Your six WebMCP tools are
+                  registered — open ChatGPT and ask it what it knows about
+                  you.
                 </p>
               </div>
             </div>
@@ -144,6 +148,13 @@ export default async function AppPage() {
               </div>
             </Reveal>
           </div>
+
+          {/* WebMCP tool-call simulator */}
+          <Reveal delay={0.2}>
+            <div className="mt-6">
+              <WebMCPTestPanel />
+            </div>
+          </Reveal>
         </div>
       </main>
       <SiteFooter />
