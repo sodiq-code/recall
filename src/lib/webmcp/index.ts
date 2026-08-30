@@ -10,10 +10,17 @@
  *   - The tool dictionary: { name, title?, description, inputSchema?, execute,
  *     annotations? }
  *   - The options dictionary: { exposedTo?: string[], signal?: AbortSignal }
- *   - exposedTo goes in the OPTIONS (2nd arg), NOT on the tool definition
+ *   - CRITICAL: exposedTo should NOT be passed for the built-in browser agent.
+ *     The spec says: "by default in the top-level document, a missing exposedTo
+ *     array would expose tools to the built-in agent." The ChatGPT in-app
+ *     browser IS the built-in agent, so we must NOT pass exposedTo — passing it
+ *     would restrict exposure to only those origins, preventing the built-in
+ *     agent from seeing the tools.
  *   - execute is a ToolExecuteCallback: (inputObject, options) => MaybePromise<unknown>
  *     where options is { signal: AbortSignal }
- *   - The "tools" permissions-policy feature defaults to 'self'
+ *   - Tool responses should be in MCP content format:
+ *     { content: [{ type: "text", text: "..." }] }
+ *     The official useWebMCP hook normalizes all returns to this format.
  */
 
 import type {
@@ -31,7 +38,10 @@ interface ModelContextTool {
   title?: string;
   description: string;
   inputSchema?: object;
-  execute: (inputObject: Record<string, unknown>, options: { signal: AbortSignal }) => Promise<unknown>;
+  execute: (
+    inputObject: Record<string, unknown>,
+    options: { signal: AbortSignal },
+  ) => Promise<unknown>;
   annotations?: {
     readOnlyHint?: boolean;
     untrustedContentHint?: boolean;
@@ -62,20 +72,88 @@ export function isWebMCPSupported(): boolean {
 }
 
 /**
+ * Normalize a tool's return value into the MCP content format.
+ *
+ * The official useWebMCP hook does this normalization. We replicate it here
+ * so our tool handlers can return plain objects/strings and the agent still
+ * receives a valid MCP response.
+ *
+ * - A string → { content: [{ type: "text", text }] }
+ * - undefined/null → { content: [] } (success, no payload)
+ * - Already { content: [...] } → passed through untouched
+ * - A thrown value → { content: [{ type: "text", text }], isError: true }
+ * - Anything else (object/array/number) → JSON-serialized into a text block
+ */
+function toToolResponse(value: unknown): unknown {
+  // Already a well-formed MCP tool result — pass through untouched.
+  if (
+    value &&
+    typeof value === "object" &&
+    Array.isArray((value as { content?: unknown[] }).content)
+  ) {
+    return value;
+  }
+
+  // execute returned nothing — report a successful, empty result.
+  if (value === undefined || value === null) {
+    return { content: [] };
+  }
+
+  // Strings map directly to a single text block.
+  if (typeof value === "string") {
+    return { content: [{ type: "text", text: value }] };
+  }
+
+  // Anything else (objects, arrays, numbers) is serialized to JSON text.
+  return {
+    content: [
+      { type: "text", text: JSON.stringify(value) },
+    ],
+  };
+}
+
+/**
+ * Convert any error into an MCP error response.
+ */
+function toErrorResponse(error: unknown): unknown {
+  const text =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : safeStringify(error);
+  return { content: [{ type: "text", text }], isError: true };
+}
+
+function safeStringify(value: unknown): string {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+/**
  * Register Recall's WebMCP tools with the browser.
  *
  * This is ASYNC — registerTool() returns a Promise per the spec. The function
  * awaits all registrations and returns a handle whose `unregister()` aborts
  * every tool's AbortController (tearing them down cleanly).
  *
+ * CRITICAL: We do NOT pass `exposedTo` in the options. The spec says the
+ * built-in browser agent (ChatGPT in-app browser) gets access to tools by
+ * default when `exposedTo` is missing. Passing `exposedTo` would restrict
+ * exposure to only those origins, preventing the built-in agent from seeing
+ * the tools.
+ *
  * @param options.tools   the tool definitions to register
- * @param options.fromOrigins  cross-origin agent origins granted access;
- *   passed as `exposedTo` in the registerTool options per the spec.
+ * @param options.fromOrigins  (unused — kept for API compat; the built-in
+ *   agent gets access by default)
  */
 export async function registerWebMCPTools(
   options: RegisterWebMCPToolsOptions,
 ): Promise<RegisteredTools> {
-  const { tools, fromOrigins = [CHATGPT_AUDIENCE] } = options;
+  const { tools } = options;
 
   if (!isWebMCPSupported()) {
     return { unregister: () => {}, registered: [] };
@@ -95,13 +173,26 @@ export async function registerWebMCPTools(
           title: tool.title,
           description: tool.description,
           inputSchema: tool.inputSchema,
-          execute: async (inputObject) => {
-            return tool.execute(inputObject);
+          // The execute callback wraps the handler so:
+          // 1. The options.signal is available (per the spec)
+          // 2. The return value is normalized to MCP content format
+          // 3. Any thrown error becomes an isError response
+          async execute(
+            inputObject: Record<string, unknown>,
+            _executeOptions: { signal: AbortSignal },
+          ) {
+            try {
+              const result = await tool.execute(inputObject);
+              return toToolResponse(result);
+            } catch (error) {
+              return toErrorResponse(error);
+            }
           },
           annotations: tool.annotations,
         },
+        // Do NOT pass exposedTo — the built-in agent gets access by default.
+        // Passing exposedTo would restrict exposure to only those origins.
         {
-          exposedTo: fromOrigins,
           signal: ac.signal,
         },
       );
