@@ -1,18 +1,18 @@
 /**
- * Recall — capability token helpers (foundation; fully wired on Day 6).
+ * Recall — capability token helpers.
  *
  * A capability token is the credential an agent (ChatGPT) presents to call a
  * Recall tool. It is short-TTL (60-300s), audience-restricted (scoped to
  * chatgpt.com or a user-granted origin), and scope-limited (a subset of the
- * six tools). It is signed with the user's site key (WebCrypto) so a token is
- * verifiable independent of the database.
+ * six ENABLED tools). It is signed with the user's site key (WebCrypto) so a
+ * token is verifiable independent of the database.
  *
  * Blueprint §17: "the capability token is the credential; the audit log is
  * the receipt."
  *
- * On Day 1 this module establishes the issue/verify contract. Day 6 wires
- * WebCrypto `subtle.sign` (with a node:crypto fallback) and enforces token
- * verification on every tool call.
+ * The token's scope is ALWAYS intersected with the user's currently-enabled
+ * tools. If the user disables a tool after a token is issued, the token can
+ * no longer call that tool — the verify check re-reads the permission state.
  */
 import { db } from "@/lib/db";
 import {
@@ -20,6 +20,9 @@ import {
   type ToolName,
 } from "@/lib/constants";
 import { CHATGPT_AUDIENCE } from "@/lib/constants";
+import { getPermissionState } from "@/lib/permissions";
+import { signWithSiteKey } from "@/lib/security/site-key";
+import type { InArgs } from "@libsql/client";
 
 /** A verified capability token — the principal a tool call runs as. */
 export interface VerifiedCapability {
@@ -30,11 +33,20 @@ export interface VerifiedCapability {
   expiresAt: Date;
 }
 
+/** A token as returned to the client (no secrets beyond the id + signature). */
+export interface IssuedToken {
+  id: string;
+  audience: string;
+  scope: ToolName[];
+  expiresAt: string;
+  signature: string;
+}
+
 export interface IssueCapabilityOptions {
   userId: string;
   /** Defaults to the ChatGPT in-app browser origin. */
   audience?: string;
-  /** Defaults to all six tools. */
+  /** Defaults to all enabled tools. */
   scope?: ToolName[];
   /** TTL in seconds; clamped to [60, 300]. */
   ttlSeconds?: number;
@@ -43,32 +55,57 @@ export interface IssueCapabilityOptions {
 /**
  * Issue a new capability token for an agent session.
  *
- * Day 6 attaches the WebCrypto signature and writes the public key id. The
- * database row is the revocation handle — deleting it revokes the token.
+ * The token's scope is intersected with the user's currently-enabled tools,
+ * so a disabled tool can never be called even if the agent requests it.
+ * The token is signed with the user's site key (WebCrypto ECDSA P-256) so
+ * it is verifiable independent of the database.
  */
 export async function issueCapability(
   opts: IssueCapabilityOptions,
-): Promise<{ id: string; audience: string; scope: ToolName[]; expiresAt: Date }> {
+): Promise<IssuedToken> {
   const ttl = clampTtl(opts.ttlSeconds ?? CAPABILITY_TOKEN_DEFAULT_TTL_SECONDS);
   const audience = opts.audience ?? CHATGPT_AUDIENCE;
-  const scope = opts.scope ?? [];
   const expiresAt = new Date(Date.now() + ttl * 1000);
-  const expiresAtIso = expiresAt.toISOString().replace("T", " ").replace("Z", "");
+  const expiresAtIso = expiresAt.toISOString();
+  const expiresAtDb = expiresAtIso.replace("T", " ").replace("Z", "");
   const id = crypto.randomUUID();
 
+  // Intersect the requested scope with the user's enabled tools.
+  const permState = await getPermissionState(opts.userId);
+  const requestedScope = opts.scope ?? permState.enabledTools;
+  const scope = requestedScope.filter((t) => permState.enabledTools.includes(t));
+
+  // Persist the token row.
   await db.execute({
     sql: `INSERT INTO CapabilityToken (id, userId, audience, scopeJson, issuedAt, expiresAt) VALUES (?, ?, ?, ?, datetime('now'), ?)`,
-    args: [id, opts.userId, audience, JSON.stringify(scope), expiresAtIso],
+    args: [id, opts.userId, audience, JSON.stringify(scope), expiresAtDb] as InArgs,
   });
 
-  return { id, audience, scope, expiresAt };
+  // Sign the token payload with the user's site key.
+  const payload = {
+    id,
+    userId: opts.userId,
+    audience,
+    scope,
+    expiresAt: expiresAtIso,
+  };
+  const signature = await signWithSiteKey(opts.userId, payload);
+
+  return {
+    id,
+    audience,
+    scope,
+    expiresAt: expiresAtIso,
+    signature,
+  };
 }
 
 /**
  * Verify a capability token for a given tool call.
  *
- * Day 6 adds signature verification. Day 1 checks existence, expiry, scope,
- * and revocation — enough of the contract for the scaffold to typecheck.
+ * Checks: existence, revocation, expiry, audience match, scope membership,
+ * AND that the tool is currently ENABLED in the user's permission state
+ * (re-read from the database so a post-issuance disable takes effect).
  */
 export async function verifyCapability(
   tokenId: string,
@@ -81,24 +118,34 @@ export async function verifyCapability(
   });
 
   if (result.rows.length === 0) return null;
-  const row = result.rows[0] as Record<string, unknown>;
+  const row = result.rows[0] as unknown as {
+    id: string;
+    userId: string;
+    audience: string;
+    scopeJson: string;
+    expiresAt: string;
+    revokedAt: string | null;
+  };
   if (row.revokedAt) return null;
 
-  const expiresAtStr = row.expiresAt as string;
-  const expiresAt = new Date(expiresAtStr.replace(" ", "T") + "Z");
+  const expiresAt = new Date(row.expiresAt.replace(" ", "T") + "Z");
   if (expiresAt.getTime() < Date.now()) return null;
 
-  const audience = row.audience as string;
-  if (expectedAudience && audience !== expectedAudience) return null;
+  if (expectedAudience && row.audience !== expectedAudience) return null;
 
-  const scope = JSON.parse((row.scopeJson as string) ?? "[]") as ToolName[];
+  const scope = JSON.parse(row.scopeJson ?? "[]") as ToolName[];
   if (scope.length > 0 && !scope.includes(toolName)) return null;
 
+  // Re-check the user's current permission state — a post-issuance disable
+  // must take effect immediately.
+  const permState = await getPermissionState(row.userId);
+  if (!permState.enabledTools.includes(toolName)) return null;
+
   return {
-    userId: row.userId as string,
-    audience,
+    userId: row.userId,
+    audience: row.audience,
     scope,
-    capabilityTokenId: row.id as string,
+    capabilityTokenId: row.id,
     expiresAt,
   };
 }
@@ -107,7 +154,42 @@ export async function verifyCapability(
 export async function revokeCapability(tokenId: string): Promise<void> {
   await db.execute({
     sql: `UPDATE CapabilityToken SET revokedAt = datetime('now') WHERE id = ?`,
-    args: [tokenId],
+    args: [tokenId] as InArgs,
+  });
+}
+
+/** List active (non-expired, non-revoked) tokens for a user. */
+export async function listActiveTokens(
+  userId: string,
+): Promise<
+  {
+    id: string;
+    audience: string;
+    scope: ToolName[];
+    issuedAt: Date;
+    expiresAt: Date;
+  }[]
+> {
+  const result = await db.execute({
+    sql: `SELECT id, audience, scopeJson, issuedAt, expiresAt FROM CapabilityToken WHERE userId = ? AND revokedAt IS NULL AND expiresAt > datetime('now') ORDER BY issuedAt DESC`,
+    args: [userId] as InArgs,
+  });
+
+  return result.rows.map((row) => {
+    const r = row as unknown as {
+      id: string;
+      audience: string;
+      scopeJson: string;
+      issuedAt: string;
+      expiresAt: string;
+    };
+    return {
+      id: r.id,
+      audience: r.audience,
+      scope: JSON.parse(r.scopeJson ?? "[]") as ToolName[],
+      issuedAt: new Date(r.issuedAt.replace(" ", "T") + "Z"),
+      expiresAt: new Date(r.expiresAt.replace(" ", "T") + "Z"),
+    };
   });
 }
 

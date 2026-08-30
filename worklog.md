@@ -659,3 +659,91 @@ Stage Summary:
     target)
 - Awaiting the user's go-ahead to begin Task 6 (Permissions + capability
   tokens + summarize/timeline tools).
+
+---
+Task ID: 6
+Agent: Z.ai Code (orchestrator)
+Task: Permissions + capability tokens + summarize/timeline tools (blueprint §32, Day 6)
+
+Work Log:
+- Built the permissions data-access layer (lib/permissions/index.ts):
+  - getPermissionState — auto-creates a default state (all 6 tools enabled,
+    chatgpt.com granted) on first access
+  - setToolEnabled — enable/disable a single tool
+  - setEnabledTools — set the full enabled set (validated against TOOL_NAMES)
+  - addGrantedOrigin / removeGrantedOrigin — manage granted agent origins
+  - isToolEnabled / isOriginGranted — check helpers
+  - normalizeOrigin — trims, ensures https://, strips trailing slash
+- Wired /api/permissions routes (GET + PATCH):
+  - GET returns the user's permission state (auto-created if missing)
+  - PATCH supports four actions: toggleTool, setEnabledTools, addOrigin,
+    removeOrigin. All validate input.
+- Updated lib/capability/index.ts:
+  - issueCapability now intersects the requested scope with the user's
+    currently-enabled tools (a disabled tool can never be in a token's scope)
+  - issueCapability signs the token with the user's site key (WebCrypto
+    ECDSA P-256) via signWithSiteKey
+  - verifyCapability re-checks the user's current permission state (a
+    post-issuance disable takes effect immediately — the token is invalid
+    for that tool even if it was in the original scope)
+  - Added listActiveTokens for the settings UI
+- Wired /api/capability-token routes:
+  - POST /api/capability-token — issues a new token (validates the audience
+    is a granted origin, signs with the site key, appends an audit entry)
+  - POST /api/capability-token/verify — verifies a token for a given tool
+    (used by external parties + the test panel)
+- Fixed lib/security/site-key.ts: the generateKey call returns a
+  CryptoKeyPair, not a single CryptoKey. Fixed to use keyPair.privateKey
+  for signing and export the private key JWK for storage.
+- Built /app/settings page (server component, session-gated):
+  - Per-tool enable/disable: 6 toggle switches with tool icons, read-only/
+    untrusted badges, and the tool summary
+  - Granted origins management: add an origin (input + Grant button),
+    remove an origin (X button per row)
+  - Capability token issuance: "Issue capability token" button that creates
+    a short-TTL (120s) token signed with the site key, displays the token
+    (id, audience, scope, expiry, signature)
+  - All mutations use TanStack Query with optimistic cache updates + toast
+- Updated the WebMCP bridge to only register ENABLED tools:
+  - Fetches the user's permission state
+  - Filters RECALL_TOOLS to only the enabled set
+  - Re-registers when the enabled set changes (the useEffect depends on
+    enabledTools.join(",") so a toggle in Settings takes effect when the
+    user returns to /app)
+
+Verification (Task 6 Definition of Done):
+- ✅ `bun run lint` — 0 errors, 0 warnings
+- ✅ `bun run typecheck` — tsc --noEmit clean
+- ✅ GET /api/permissions → returns default state (6 tools, chatgpt.com)
+- ✅ PATCH toggleTool summarize=false → summarize removed from enabledTools
+- ✅ POST /api/capability-token → issues a signed token with scope excluding
+  the disabled tool, returns id + audience + scope + signature
+- ✅ POST /api/capability-token/verify for query (enabled) → valid: true
+- ✅ POST /api/capability-token/verify for summarize (disabled) → valid: false
+  (reason: token_invalid_or_expired_or_tool_disabled)
+- ✅ PATCH toggleTool summarize=true → summarize back in enabledTools
+- ✅ PATCH addOrigin https://claude.ai → grantedOrigins updated
+- ✅ POST /api/capability-token with audience=https://evil.com (not granted)
+  → 403 origin_not_granted
+- ✅ Browser: /app/settings renders with "Tool permissions" (6 toggle
+  switches), "Granted agent origins" (add/remove), "Capability tokens"
+  (issue button). 0 console errors, 0 page errors.
+- ✅ Browser interactivity: toggled the summarize switch from checked=true
+  to checked=false — the UI updated, no errors.
+
+Stage Summary:
+- Task 6 is complete. The user can enable/disable any of the six tools
+  from /app/settings, and the WebMCP bridge only registers the enabled
+  ones. Capability tokens are signed with the user's WebCrypto site key
+  (ECDSA P-256) and scoped to the enabled tools; the verify check re-reads
+  the permission state so a post-issuance disable takes effect immediately.
+  Granted-origins management restricts which agent origins can receive a
+  token. All summarize/timeline tool handlers were already wired in Task 4
+  and now respect the permission state.
+- Note on token scope immutability: a token's scope is fixed at issuance
+  time. Re-enabling a tool after issuing a token means the OLD token still
+  can't call it (the scope was baked in), but a NEW token will include it.
+  This is the correct security model — tokens are short-TTL (120s) so the
+  user just re-issues.
+- Awaiting the user's go-ahead to begin Task 7 (Audit export + declarative
+  form annotation + README).

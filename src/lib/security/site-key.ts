@@ -13,8 +13,6 @@
  */
 import { db } from "@/lib/db";
 
-type WebCryptoKey = Awaited<ReturnType<typeof crypto.subtle.generateKey>>;
-
 const keyCache = new Map<string, CryptoKey>();
 
 /**
@@ -48,15 +46,17 @@ export async function getSiteKey(userId: string): Promise<CryptoKey> {
     { name: "ECDSA", namedCurve: "P-256" },
     true,
     ["sign", "verify"],
-  )) as WebCryptoKey & CryptoKey;
+  )) as CryptoKeyPair;
 
-  const jwk = await crypto.subtle.exportKey("jwk", keyPair);
+  // Export the PRIVATE key for signing (stored as JWK, used with ["sign"]).
+  const privateKeyJwk = await crypto.subtle.exportKey("jwk", keyPair.privateKey);
   await db.execute({
     sql: `UPDATE "User" SET siteKeyJwk = ? WHERE id = ?`,
-    args: [JSON.stringify(jwk), userId],
+    args: [JSON.stringify(privateKeyJwk), userId],
   });
-  keyCache.set(userId, keyPair);
-  return keyPair;
+  // Cache the PRIVATE key for signing.
+  keyCache.set(userId, keyPair.privateKey);
+  return keyPair.privateKey;
 }
 
 /**

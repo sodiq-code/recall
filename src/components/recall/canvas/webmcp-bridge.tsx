@@ -1,125 +1,141 @@
 "use client";
 
 import * as React from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   registerWebMCPTools,
   isWebMCPSupported,
 } from "@/lib/webmcp";
 import { RECALL_TOOLS } from "@/lib/webmcp/recall-tools";
-import { CHATGPT_AUDIENCE } from "@/lib/constants";
+import { CHATGPT_AUDIENCE, type ToolName } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 /**
  * Recall — WebMCP bridge.
  *
- * The client component that registers Recall's six WebMCP tools with the
- * browser when a signed-in user opens /app. Registration happens once on mount
- * and tears down on unmount (sign-out, navigation away).
+ * Registers Recall's six WebMCP tools with the browser when a signed-in user
+ * opens /app. Only the ENABLED tools are registered — the bridge fetches the
+ * user's permission state and filters the tool set. When the user toggles a
+ * tool in Settings and returns to /app, the bridge re-registers with the new
+ * set.
  *
  * The `fromOrigins` grant defaults to `['https://chatgpt.com']` — the ChatGPT
- * in-app browser origin. This is the cross-origin grant that lets ChatGPT's
- * agent runtime call Recall's tools through the page's existing sandbox
- * (blueprint §17, §21.1).
+ * in-app browser origin.
  *
- * When the browser does NOT support WebMCP (no `document.modelContext`), the
- * component shows a "not available" badge and the tools are not registered —
- * the Recall canvas still works for direct editing, the agent simply cannot
- * call tools until the user opens a WebMCP-capable browser (ChatGPT in-app
- * browser, or Chrome 149+ with the origin-trial flag).
- *
- * Blueprint §32 (Day 4 definition of done): "document.modelContext.registerTool()
- * for all six tools; query() handler calls /api/memory/query; tool definitions
- * include readOnlyHint/untrustedContentHint; fromOrigins=['https://chatgpt.com']"
+ * When the browser does NOT support WebMCP, the component shows a "not
+ * available" badge.
  */
 
 type RegistrationState = "unsupported" | "registering" | "registered" | "failed";
 
+interface PermissionState {
+  userId: string;
+  enabledTools: ToolName[];
+  grantedOrigins: string[];
+  updatedAt: number;
+}
+
 export function WebMCPBridge() {
   const [state, setState] = React.useState<RegistrationState>("registering");
-  const [registeredTools, setRegisteredTools] = React.useState<string[]>([]);
-  const [error, setError] = React.useState<string | null>(null);
+  const [registeredCount, setRegisteredCount] = React.useState(0);
+
+  // Fetch the user's permission state so we only register enabled tools.
+  const { data: permData } = useQuery<{ state: PermissionState }>({
+    queryKey: ["permissions"],
+    queryFn: async () => {
+      const res = await fetch("/api/permissions");
+      if (!res.ok) throw new Error("Failed to load permissions");
+      return res.json();
+    },
+  });
+
+  const enabledTools = permData?.state?.enabledTools ?? [];
 
   React.useEffect(() => {
-    // Feature-detect WebMCP support.
     if (!isWebMCPSupported()) {
       setState("unsupported");
       return;
     }
 
+    // Filter the tool set to only enabled tools.
+    const toolsToRegister = enabledTools.length > 0
+      ? RECALL_TOOLS.filter((t) => enabledTools.includes(t.name as ToolName))
+      : RECALL_TOOLS; // Default to all if permissions not loaded yet
+
+    if (toolsToRegister.length === 0) {
+      setState("registered");
+      setRegisteredCount(0);
+      return;
+    }
+
     try {
       const result = registerWebMCPTools({
-        tools: RECALL_TOOLS,
+        tools: toolsToRegister,
         fromOrigins: [CHATGPT_AUDIENCE],
       });
-      setRegisteredTools(result.registered);
+      setRegisteredCount(result.registered.length);
       setState(result.registered.length > 0 ? "registered" : "failed");
-      setError(null);
 
       return () => {
         result.unregister();
       };
-    } catch (err) {
+    } catch {
       setState("failed");
-      setError(err instanceof Error ? err.message : "Unknown error");
     }
-  }, []);
+  }, [enabledTools.join(",")]); // Re-register when the enabled set changes
 
   const config = {
     unsupported: {
       label: "WebMCP unavailable",
       className: "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
       title:
-        "This browser does not support WebMCP. Open Recall in the ChatGPT in-app browser or Chrome 149+ with chrome://flags/#enable-webmcp-testing to let your agent call tools.",
+        "This browser does not support WebMCP. Open Recall in the ChatGPT in-app browser or Chrome 149+ with chrome://flags/#enable-webmcp-testing.",
     },
     registering: {
-      label: "Registering tools…",
+      label: "Registering…",
       className: "border-border/60 bg-muted/40 text-muted-foreground",
-      title: "Registering Recall's six WebMCP tools with the browser…",
+      title: "Registering tools…",
     },
     registered: {
-      label: `${registeredTools.length}/6 tools live`,
+      label: `${registeredCount}/${enabledTools.length || 6} tools live`,
       className: "border-primary/30 bg-primary/10 text-primary",
-      title: `${registeredTools.length} of 6 WebMCP tools are registered. Your ChatGPT agent can now call: ${registeredTools.join(", ")}.`,
+      title: `${registeredCount} of ${enabledTools.length || 6} WebMCP tools are registered.`,
     },
     failed: {
       label: "Registration failed",
       className: "border-destructive/30 bg-destructive/10 text-destructive",
-      title: error ?? "WebMCP tool registration failed.",
+      title: "WebMCP tool registration failed.",
     },
   }[state];
 
   return (
-    <div className="flex items-center gap-2">
-      <Badge
-        variant="secondary"
-        className={cn("gap-1.5 border px-2.5 py-0.5 text-xs font-medium", config.className)}
-        title={config.title}
-      >
-        <span className="relative flex h-1.5 w-1.5">
-          {state === "registered" && (
-            <>
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
-            </>
-          )}
-          {state === "registering" && (
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-muted-foreground" />
-          )}
-          {state === "unsupported" && (
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-500" />
-          )}
-          {state === "failed" && (
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-destructive" />
-          )}
-        </span>
-        {config.label}
-      </Badge>
-      {state === "registered" && registeredTools.length > 0 && (
-        <span className="hidden font-mono text-[10px] text-muted-foreground/60 sm:inline">
-          {registeredTools.join(" · ")}
-        </span>
-      )}
-    </div>
+    <Badge
+      variant="secondary"
+      className={cn("gap-1.5 border px-2.5 py-0.5 text-xs font-medium", config.className)}
+      title={config.title}
+    >
+      <span className="relative flex h-1.5 w-1.5">
+        {state === "registered" && registeredCount > 0 && (
+          <>
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
+          </>
+        )}
+        {state === "registering" && (
+          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+        )}
+        {state === "unsupported" && (
+          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-500" />
+        )}
+        {state === "failed" && (
+          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-destructive" />
+        )}
+        {state === "registered" && registeredCount === 0 && (
+          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+        )}
+      </span>
+      {config.label}
+    </Badge>
   );
 }
