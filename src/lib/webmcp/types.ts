@@ -42,7 +42,8 @@ export interface WebMCPToolDefinition<TInput = Record<string, unknown>, TResult 
 /** The full registration bundle passed to `registerWebMCPTools`. */
 export interface RegisterWebMCPToolsOptions {
   tools: WebMCPToolDefinition[];
-  /** Cross-origin agent origins granted access to the tools. */
+  /** Cross-origin agent origins granted access to the tools. Passed as
+   *  `exposedOrigins` on each tool definition per the spec. */
   fromOrigins?: string[];
 }
 

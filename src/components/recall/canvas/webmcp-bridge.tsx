@@ -69,20 +69,31 @@ export function WebMCPBridge() {
       return;
     }
 
-    try {
-      const result = registerWebMCPTools({
-        tools: toolsToRegister,
-        fromOrigins: [CHATGPT_AUDIENCE],
-      });
-      setRegisteredCount(result.registered.length);
-      setState(result.registered.length > 0 ? "registered" : "failed");
+    let cancelled = false;
+    let unregisterFn: (() => void) | null = null;
 
-      return () => {
-        result.unregister();
-      };
-    } catch {
-      setState("failed");
-    }
+    // registerWebMCPTools is async — it awaits all registerTool() promises.
+    setState("registering");
+
+    registerWebMCPTools({
+      tools: toolsToRegister,
+      fromOrigins: [CHATGPT_AUDIENCE],
+    })
+      .then((result) => {
+        if (cancelled) return;
+        setRegisteredCount(result.registered.length);
+        setState(result.registered.length > 0 ? "registered" : "failed");
+        unregisterFn = result.unregister;
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setState("failed");
+      });
+
+    return () => {
+      cancelled = true;
+      unregisterFn?.();
+    };
   }, [enabledTools.join(",")]); // Re-register when the enabled set changes
 
   const config = {
