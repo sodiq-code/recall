@@ -13,6 +13,7 @@
 import { createHash } from "node:crypto";
 import { db } from "@/lib/db";
 import type { ToolName } from "@/lib/constants";
+import { notifyAuditEvent } from "@/lib/realtime/notify";
 
 /** The compact provenance summary stored alongside each entry. */
 export interface AuditResultSummary {
@@ -56,14 +57,17 @@ export async function appendAuditEntry(input: {
   resultCount: number;
   capabilityTokenId?: string;
   signature?: string;
-}) {
+}): Promise<{ id: string; resultHash: string; timestamp: number }> {
   const hash = computeResultHash(input.result);
   const id = crypto.randomUUID();
+  const timestamp = Date.now();
+  const timestampIso = new Date(timestamp).toISOString().replace("T", " ").replace("Z", "");
   await db.execute({
-    sql: `INSERT INTO AuditEntry (id, userId, timestamp, callerOrigin, toolName, argsJson, resultCount, resultHash, capabilityTokenId, signature) VALUES (?, ?, datetime('now'), ?, ?, ?, ?, ?, ?, ?)`,
+    sql: `INSERT INTO AuditEntry (id, userId, timestamp, callerOrigin, toolName, argsJson, resultCount, resultHash, capabilityTokenId, signature) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       id,
       input.userId,
+      timestampIso,
       input.callerOrigin,
       input.toolName,
       JSON.stringify(input.args),
@@ -73,7 +77,23 @@ export async function appendAuditEntry(input: {
       input.signature ?? "unsigned",
     ],
   });
-  return { id, resultHash: hash };
+
+  // Fan out to the realtime mini-service so all open Recall tabs update
+  // their activity feed in real time. Fire-and-forget — the entry is already
+  // persisted, so a mini-service outage doesn't lose data.
+  await notifyAuditEvent(input.userId, {
+    id,
+    timestamp,
+    callerOrigin: input.callerOrigin,
+    toolName: input.toolName,
+    args: input.args,
+    resultCount: input.resultCount,
+    resultHash: hash,
+    capabilityTokenId: input.capabilityTokenId ?? null,
+    signature: input.signature ?? "unsigned",
+  });
+
+  return { id, resultHash: hash, timestamp };
 }
 
 /**

@@ -45,6 +45,7 @@ export function RealtimeStatus({ compact = false }: { compact?: boolean }) {
 
         // Connect via the gateway with XTransformPort so Caddy routes it.
         socket = io("/?XTransformPort=" + port, {
+          path: "/socket",
           transports: ["websocket"],
           reconnection: true,
           reconnectionAttempts: Infinity,

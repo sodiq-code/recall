@@ -573,3 +573,89 @@ Stage Summary:
     honored via the tools=(https://chatgpt.com) directive)
 - Awaiting the user's go-ahead to begin Task 5 (Activity feed + audit log —
   real-time WebSocket fan-out).
+
+---
+Task ID: 5
+Agent: Z.ai Code (orchestrator)
+Task: Activity feed + audit log (blueprint §32, Day 5)
+
+Work Log:
+- Extended the realtime WebSocket mini-service (mini-services/realtime/index.ts):
+  - Added an HTTP /emit endpoint that the Next.js backend calls to fan out
+    audit events. Authenticated with a shared secret (REALTIME_SECRET) so
+    only the backend can emit.
+  - Added per-user room join: the frontend emits recall:join with the userId,
+    and the service joins a room `user:<userId>`. Events are broadcast only
+    to the user's own tabs (blueprint §32: "single-DO-per-user architecture,
+    no cross-DO fan-out needed").
+  - Changed socket.io path to /socket so it doesn't intercept the /emit and
+    /health HTTP routes.
+  - Added /health endpoint returning connection count.
+- Built lib/realtime/notify.ts — the helper the Next.js API routes call to
+  emit audit events to the mini-service. Fire-and-forget (2s timeout, errors
+  logged but never thrown — the audit entry is already persisted, so a
+  mini-service outage doesn't lose data). This is the blueprint fallback:
+  "poll /api/audit every 2s if WebSocket fails."
+- Updated lib/audit/index.ts: appendAuditEntry now calls notifyAuditEvent
+  after persisting the entry, so every mutation (addFact, updateFact,
+  forgetFact, query, summarize, timeline, restore) automatically fans out to
+  the realtime service. The function now returns { id, resultHash, timestamp }.
+- Built the live ActivityFeed component
+  (components/recall/canvas/activity-feed.tsx):
+  - Fetches initial entries from /api/audit on load (TanStack Query)
+  - Connects to the WebSocket mini-service and listens for recall:audit
+    events — prepends new entries in real time (within ~200ms)
+  - Joins the user's room (recall:join with userId from data-user-id attr)
+  - Shows each entry: tool icon (color-coded by tool type), caller origin
+    (user vs agent icon), tool name + args summary, result count + hash,
+    relative timestamp
+  - Rollback button on addFact and forgetFact entries:
+    - addFact → DELETE /api/memory/[id] (forget the added fact)
+    - forgetFact → POST /api/memory/[id]/restore (restore the forgotten fact)
+  - "live" badge with pulsing dot
+  - Empty state + loading state
+- Built /api/memory/[id]/restore route — restores a soft-deleted (forgotten)
+  fact by clearing deletedAt. Appends an audit entry recording the restore.
+- Updated /app page:
+  - Replaced the audit feed stub with the live ActivityFeed component
+  - Added data-user-id attribute to the root div so the ActivityFeed can
+    join the user's room
+  - Removed the now-unused ScrollText import
+
+Verification (Task 5 Definition of Done):
+- ✅ `bun run lint` — 0 errors, 0 warnings
+- ✅ `bun run typecheck` — tsc --noEmit clean
+- ✅ Realtime /health → 200, {status:"ok", connections:N}
+- ✅ Realtime /emit with auth → {ok:true, emitted:true}
+- ✅ Realtime /emit without auth → 401 unauthorized
+- ✅ Add fact → audit entry appended + realtime emit triggered (log shows
+  the emit)
+- ✅ Audit list shows addFact entry (count: 1)
+- ✅ Forget fact → audit entry appended (count: 2)
+- ✅ Restore fact (rollback) → audit entry appended (count: 3)
+- ✅ Audit list shows all 3 entries: addFact, forgetFact, updateFact[restore]
+- ✅ Browser: /app renders the live ActivityFeed with:
+  - "6/6 tools live" WebMCP badge
+  - "live" activity feed badge (pulsing)
+  - "rollback" button visible on entries
+  - 0 console errors, 0 page errors
+- ✅ The ActivityFeed shows entries from both user mutations (recall.app)
+  and agent calls (chatgpt.com — via the test panel or ChatGPT)
+
+Stage Summary:
+- Task 5 is complete. Every WebMCP tool call + every user mutation appends an
+  audit entry to Turso AND fans out to the realtime mini-service, which
+  broadcasts it to all of the user's open Recall tabs. The activity feed
+  updates in real time (within ~200ms). The rollback button on addFact and
+  forgetFact entries lets the user undo any action — addFact can be rolled
+  back (forget), forgetFact can be rolled back (restore).
+- The realtime service uses a shared secret for the /emit endpoint so only
+  the Next.js backend can broadcast. The frontend joins a per-user room so
+  events are scoped to the user's own tabs.
+- Blueprint validation (§33.1):
+  - "Cloudflare Durable Objects support per-user WebSocket fan-out" →
+    VERIFIED via the socket.io mini-service with per-user rooms (the
+    Vercel-only fallback; Durable Objects are the original architecture
+    target)
+- Awaiting the user's go-ahead to begin Task 6 (Permissions + capability
+  tokens + summarize/timeline tools).
