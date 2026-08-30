@@ -21,8 +21,8 @@ export default function NotFound() {
         That memory isn&apos;t here yet.
       </h1>
       <p className="mt-4 max-w-md text-pretty text-muted-foreground">
-        This route is part of the Recall build-out and ships on a later day.
-        The landing page and docs are ready now.
+        The page you&apos;re looking for doesn&apos;t exist or may have moved.
+        Try heading back to the home page.
       </p>
       <Button asChild className="mt-8">
         <Link href="/">

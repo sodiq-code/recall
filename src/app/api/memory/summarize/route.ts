@@ -44,7 +44,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     facts,
     count: facts.length,
-    ranking: "relevanceScore (frequency-based, blueprint §23.3)",
+    ranking: "relevanceScore (frequency-based)",
   });
 }
 

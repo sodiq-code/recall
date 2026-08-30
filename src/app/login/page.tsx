@@ -95,11 +95,12 @@ export default function LoginPage({
                   <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
                   <span>
                     <strong className="text-foreground">
-                      Demo-day note:
+                      About authentication:
                     </strong>{" "}
-                    GitHub OAuth stands in for ChatGPT OAuth (third-party
-                    ChatGPT OAuth is not yet GA). When it ships, Recall will
-                    swap to ChatGPT OAuth for a native agent connection.
+                    Recall uses GitHub OAuth for sign-in. Direct ChatGPT OAuth
+                    for third-party apps is on the roadmap — once available,
+                    Recall will offer a native ChatGPT connection alongside
+                    GitHub.
                   </span>
                 </div>
               </div>
