@@ -405,3 +405,86 @@ Stage Summary:
   Client ID + Secret (auth). No additional keys required for any remaining
   task — Recall runs zero LLMs of its own.
 - Awaiting the user's go-ahead to begin Task 3 (Memory canvas + CRUD).
+
+---
+Task ID: 3
+Agent: Z.ai Code (orchestrator)
+Task: Memory canvas + CRUD (blueprint §32, Day 3)
+
+Work Log:
+- Built the memory data-access layer (lib/memory/index.ts):
+  - createFact — inserts a Fact + syncs FactTag rows in a batch
+  - getFact — single fact by ID (scoped to userId)
+  - listFacts — paginated list with optional tag filter, excludes soft-deleted
+  - updateFact — updates content + replaces tags (delete-all + re-insert)
+  - forgetFact — soft-delete (sets deletedAt), reversible
+  - restoreFact — clears deletedAt (undo forget)
+  - queryFacts — substring + tag match, sorted by relevance score (§23.3)
+  - summarizeFacts — top N by relevance (deterministic, §25.2)
+  - countFacts — count of active facts
+  - listTags — distinct tags for the filter chips
+  - validateContent (1-500 chars) + normalizeTags (lowercase, alphanumeric+hyphen, max 10)
+- Built 7 session-gated API routes:
+  - GET /api/memory — list (paginated, optional tag filter)
+  - POST /api/memory — create (validates, appends audit entry)
+  - GET /api/memory/[id] — get one
+  - PATCH /api/memory/[id] — update content + tags (validates, appends audit)
+  - DELETE /api/memory/[id] — soft-delete/forget (appends audit)
+  - POST /api/memory/query — query (substring + tag, ranked by relevance)
+  - POST /api/memory/summarize — top-N summary (deterministic)
+  - GET /api/memory/tags — distinct tags for filter chips
+- Built the memory canvas UI (client components):
+  - MemoryCanvas (memory-canvas.tsx) — the container: AddFactForm + search +
+    tag filter chips + fact list (ScrollArea). TanStack Query for data
+    fetching (30s stale, refetch on focus). Debounced search (300ms) that
+    switches between /api/memory and /api/memory/query.
+  - AddFactForm (add-fact-form.tsx) — expandable textarea + tag input +
+    submit. Optimistic insert (temp card appears immediately, rolls back on
+    error). Client-side validation (min/max content, max tags). Toast on
+    success/error.
+  - FactCard (fact-card.tsx) — fact display with source indicator (user/agent
+    icon), relevance score badge, tags, relative timestamp. Inline edit mode
+    (pencil → textarea + tag input + save/cancel). Forget button with
+    AlertDialog confirm + undo toast. Optimistic update/delete with rollback.
+- Wired the QueryProvider (TanStack Query) into the root layout so all client
+  components can use useQuery/useMutation.
+- Updated /app page: replaced the static welcome card with the interactive
+  MemoryCanvas component + the user header + the audit feed stub.
+
+Verification (Task 3 Definition of Done):
+- ✅ `bun run lint` — 0 errors, 0 warnings
+- ✅ `bun run typecheck` — tsc --noEmit clean
+- ✅ 13-step CRUD test (all pass):
+  1. LIST (empty) → total: 0
+  2. CREATE 5 facts → all created with tags
+  3. LIST (5 facts) → sorted by updatedAt DESC, tags correct
+  4. GET one fact → returns correct content + tags
+  5. UPDATE fact → content + tags replaced (sorted alphabetically)
+  6. QUERY search 'updated' → returns 1 matching fact
+  7. TAGS → returns all distinct tags
+  8. FORGET → forgotten: true, deletedAt set
+  9. LIST after forget → 4 facts (was 5)
+  10. PERSISTENCE → facts persist across "refresh" (re-list)
+  11. /app page renders canvas (Memory canvas, Add a fact, Search your memory)
+  12. Validation: empty content → 400 validation_error
+  13. Unauthenticated → 401 unauthorized
+- ✅ Browser test: /app renders with session cookie, 0 console errors, 0 page
+  errors. Memory canvas heading, search box, add-fact textarea, activity feed
+  all present in the accessibility tree.
+- ✅ Optimistic updates work (create/update/delete all update the cache
+  immediately and rollback on error)
+- ✅ Validation: content 1-500 chars, tags max 10 (lowercase alphanumeric+hyphen)
+- ✅ Audit entries appended on every mutation (create, update, forget)
+
+Stage Summary:
+- Task 3 is complete. A signed-in user can add, edit, and forget facts
+  directly in the /app canvas. Facts persist in Turso across page refresh.
+  The canvas supports search (substring + tag match), tag filtering, and
+  inline edit — all with optimistic updates and toast feedback. Every
+  mutation appends an audit entry (the feed UI is the next task).
+- The /api/memory/query and /api/memory/summarize endpoints are ready for the
+  WebMCP tool handlers (next task wires them to document.modelContext).
+- Keys: no additional keys needed. The existing Turso + GitHub OAuth setup
+  is sufficient for all remaining tasks.
+- Awaiting the user's go-ahead to begin Task 4 (WebMCP tool registration +
+  first tool call).
