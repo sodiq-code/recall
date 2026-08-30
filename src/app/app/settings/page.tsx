@@ -6,6 +6,7 @@ import { SiteFooter } from "@/components/recall/site-footer";
 import { getSessionUser } from "@/lib/auth/session";
 import { Reveal } from "@/components/recall/landing/motion-primitives";
 import { SettingsClient } from "@/components/recall/canvas/settings-client";
+import { ErrorBoundary } from "@/components/recall/canvas/error-boundary";
 
 /**
  * Recall — /app/settings.
@@ -43,7 +44,9 @@ export default async function SettingsPage() {
           </Reveal>
 
           <Reveal delay={0.05} className="mt-8">
-            <SettingsClient />
+            <ErrorBoundary label="the settings page">
+              <SettingsClient />
+            </ErrorBoundary>
           </Reveal>
         </div>
       </main>

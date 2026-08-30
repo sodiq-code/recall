@@ -14,12 +14,11 @@ import {
   ShieldCheck,
   Bot,
   User,
-  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import type { Socket } from "socket.io-client";
 import type { ToolName } from "@/lib/constants";
@@ -28,18 +27,21 @@ import type { ToolName } from "@/lib/constants";
  * Recall — ActivityFeed.
  *
  * The real-time audit feed. Shows every agent tool call + every user
- * mutation, newest first. Updates live via the WebSocket mini-service
- * (recall:audit events), so when ChatGPT calls a tool, the entry appears
- * within ~200ms without a page refresh.
+ * mutation, newest first.
  *
- * Rollback: each addFact / updateFact / forgetFact entry has a "rollback"
- * button. For addFact → forget the fact; for forgetFact → restore the fact;
- * for updateFact → the rollback is a no-op (the previous content is in the
- * audit entry's args, but applying it requires the full diff which is a
- * SHOULD/COULD enhancement).
+ * Connectivity strategy (hybrid — works on both local dev and Vercel):
+ *   1. WebSocket: attempts to connect to the realtime mini-service. When
+ *      connected, events arrive in real-time (~200ms).
+ *   2. Polling fallback: if the WebSocket is not connected within 3 seconds,
+ *      TanStack Query refetches /api/audit every 2 seconds. This ensures the
+ *      feed still updates on Vercel (where the mini-service can't run) or
+ *      when the mini-service is down.
  *
- * Blueprint §32 (Day 5 definition of done): "every WebMCP tool call appears
- * in the activity feed in real time; audit log persists every call."
+ * The userId is fetched from /api/auth/me (not from a DOM attribute) so it's
+ * not leaked to anyone inspecting the page source.
+ *
+ * Rollback: each addFact / forgetFact entry has a "rollback" button.
+ * addFact → forget the fact; forgetFact → restore the fact.
  */
 
 interface AuditEntry {
@@ -66,8 +68,24 @@ const TOOL_ICONS: Record<ToolName, React.ComponentType<{ className?: string }>> 
 export function ActivityFeed() {
   const queryClient = useQueryClient();
   const [liveEntries, setLiveEntries] = React.useState<AuditEntry[]>([]);
+  const wsConnectedRef = React.useRef(false);
+  const [polling, setPolling] = React.useState(false);
 
-  // --- Fetch initial entries ---
+  // --- Fetch the userId (for WebSocket room join) from the session API ---
+  const { data: meData } = useQuery<{ user: { id: string } }>({
+    queryKey: ["me"],
+    queryFn: async () => {
+      const res = await fetch("/api/auth/me");
+      if (!res.ok) throw new Error("Failed to load user");
+      return res.json();
+    },
+    staleTime: Infinity, // The userId doesn't change during the session
+  });
+  const userId = meData?.user.id;
+
+  // --- Fetch audit entries (with polling fallback) ---
+  // Poll every 2s ONLY when the WebSocket is not connected. When the WS
+  // connects, we stop polling to avoid double-fetching.
   const { data, isLoading } = useQuery<{
     entries: AuditEntry[];
     count: number;
@@ -78,12 +96,24 @@ export function ActivityFeed() {
       if (!res.ok) throw new Error("Failed to load audit feed");
       return res.json();
     },
+    refetchInterval: polling ? 2000 : false,
+    refetchOnWindowFocus: true,
   });
 
-  // --- WebSocket: listen for real-time audit events ---
+  // --- WebSocket: attempt real-time connection ---
   React.useEffect(() => {
+    if (!userId) return; // Wait until we have the userId
+
     let socket: Socket | null = null;
     let cancelled = false;
+    let pollTimer: ReturnType<typeof setTimeout> | null = null;
+
+    // If the WebSocket doesn't connect within 3 seconds, start polling.
+    pollTimer = setTimeout(() => {
+      if (!cancelled && !wsConnectedRef.current) {
+        setPolling(true);
+      }
+    }, 3000);
 
     async function connect() {
       try {
@@ -96,51 +126,51 @@ export function ActivityFeed() {
           transports: ["websocket"],
           reconnection: true,
           reconnectionDelay: 1000,
+          timeout: 3000,
         });
-
-        // Join the user's room so we only receive our own events.
-        // The userId is passed from the server component via a data attribute.
-        const userIdEl = document.querySelector("[data-user-id]");
-        const userId = userIdEl?.getAttribute("data-user-id");
 
         socket.on("connect", () => {
           if (cancelled) return;
+          wsConnectedRef.current = true;
+          setPolling(false); // Stop polling — WS is live
           if (userId) {
             socket?.emit("recall:join", userId);
           }
         });
 
+        socket.on("disconnect", () => {
+          if (cancelled) return;
+          wsConnectedRef.current = false;
+          setPolling(true); // Resume polling on disconnect
+        });
+
         socket.on("recall:audit", (entry: AuditEntry) => {
           if (cancelled) return;
           setLiveEntries((prev) => {
-            // Deduplicate (the initial fetch may already have this entry).
             if (prev.some((e) => e.id === entry.id)) return prev;
             return [entry, ...prev].slice(0, 100);
           });
-          // Also invalidate the query so the next refetch picks up the
-          // persisted state.
           queryClient.invalidateQueries({ queryKey: ["audit"] });
         });
       } catch {
-        // socket.io-client not loaded — the polling fallback handles it
-        // via TanStack Query's refetchOnWindowFocus.
+        // socket.io-client not loaded — polling fallback handles it
+        if (!cancelled) setPolling(true);
       }
     }
 
     connect();
     return () => {
       cancelled = true;
+      if (pollTimer) clearTimeout(pollTimer);
       socket?.disconnect();
     };
-  }, [queryClient]);
+  }, [userId, queryClient]);
 
-  // Merge the fetched entries with the live ones (live takes precedence,
-  // deduplicated by ID).
+  // Merge fetched + live entries (live takes precedence, deduplicated by ID)
   const allEntries = React.useMemo(() => {
     const fetched = data?.entries ?? [];
     const fetchedIds = new Set(fetched.map((e) => e.id));
     const liveOnly = liveEntries.filter((e) => !fetchedIds.has(e.id));
-    // Combine: live first, then fetched. Cap at 50.
     return [...liveOnly, ...fetched].slice(0, 50);
   }, [data, liveEntries]);
 
@@ -153,17 +183,23 @@ export function ActivityFeed() {
         </h2>
         <span className="flex items-center gap-1.5 text-xs">
           <span className="relative flex h-1.5 w-1.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
+            {wsConnectedRef.current ? (
+              <>
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
+              </>
+            ) : (
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-500" />
+            )}
           </span>
-          <span className="text-primary">live</span>
+          <span className={wsConnectedRef.current ? "text-primary" : "text-amber-500"}>
+            {wsConnectedRef.current ? "live" : polling ? "syncing" : "connecting"}
+          </span>
         </span>
       </div>
 
       {isLoading ? (
-        <div className="flex min-h-[200px] items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        </div>
+        <ActivityFeedSkeleton />
       ) : allEntries.length === 0 ? (
         <div className="flex min-h-[280px] flex-col items-center justify-center text-center">
           <Activity className="h-8 w-8 text-muted-foreground/40" />
@@ -172,7 +208,7 @@ export function ActivityFeed() {
           </p>
           <p className="mt-1 max-w-xs text-xs text-muted-foreground/70">
             When you add a fact or ChatGPT calls a tool, the action appears
-            here in real time — signed and reversible.
+            here — signed and reversible.
           </p>
         </div>
       ) : (
@@ -195,19 +231,41 @@ export function ActivityFeed() {
   );
 }
 
+/** Skeleton placeholder for the activity feed while loading. */
+function ActivityFeedSkeleton() {
+  return (
+    <div className="space-y-1.5">
+      {[...Array(5)].map((_, i) => (
+        <div
+          key={i}
+          className="flex items-start gap-2.5 rounded-lg border border-border/40 bg-background/40 px-3 py-2"
+        >
+          <Skeleton className="mt-0.5 h-6 w-6 shrink-0 rounded-md" />
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <Skeleton className="h-3 w-32" />
+              <Skeleton className="h-2.5 w-12" />
+            </div>
+            <Skeleton className="h-3 w-48" />
+            <Skeleton className="h-2 w-20" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function AuditEntryRow({ entry }: { entry: AuditEntry }) {
   const Icon = TOOL_ICONS[entry.toolName] ?? Activity;
   const isAgent = entry.callerOrigin !== "recall.app";
   const factId = (entry.args.factId as string) ?? null;
 
-  // Determine if rollback is available for this entry type.
   const canRollback =
     (entry.toolName === "addFact" && factId) ||
     (entry.toolName === "forgetFact" && factId);
 
   return (
     <div className="group flex items-start gap-2.5 rounded-lg border border-border/40 bg-background/40 px-3 py-2 transition-colors hover:bg-muted/30">
-      {/* Tool icon */}
       <div
         className={cn(
           "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border",
@@ -223,7 +281,6 @@ function AuditEntryRow({ entry }: { entry: AuditEntry }) {
         <Icon className="h-3 w-3" />
       </div>
 
-      {/* Content */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
           <span className="truncate font-mono text-xs text-muted-foreground">
@@ -254,10 +311,7 @@ function AuditEntryRow({ entry }: { entry: AuditEntry }) {
             {entry.resultHash.slice(0, 8)}…
           </span>
           {canRollback && (
-            <RollbackButton
-              toolName={entry.toolName}
-              factId={factId!}
-            />
+            <RollbackButton toolName={entry.toolName} factId={factId!} />
           )}
         </div>
       </div>
@@ -279,12 +333,10 @@ function RollbackButton({
     setIsRollingBack(true);
     try {
       if (toolName === "addFact") {
-        // Rollback an addFact by forgetting the fact.
         const res = await fetch(`/api/memory/${factId}`, { method: "DELETE" });
         if (!res.ok) throw new Error("Failed to rollback");
         toast.success("Rolled back — fact forgotten");
       } else if (toolName === "forgetFact") {
-        // Rollback a forgetFact by restoring the fact.
         const res = await fetch(`/api/memory/${factId}/restore`, {
           method: "POST",
         });

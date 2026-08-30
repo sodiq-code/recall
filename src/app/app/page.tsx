@@ -18,6 +18,7 @@ import { MemoryCanvas } from "@/components/recall/canvas/memory-canvas";
 import { WebMCPBridge } from "@/components/recall/canvas/webmcp-bridge";
 import { WebMCPTestPanel } from "@/components/recall/canvas/webmcp-test-panel";
 import { ActivityFeed } from "@/components/recall/canvas/activity-feed";
+import { ErrorBoundary } from "@/components/recall/canvas/error-boundary";
 
 /**
  * Recall — /app (the memory canvas).
@@ -44,7 +45,7 @@ export default async function AppPage() {
     .toUpperCase();
 
   return (
-    <div className="flex min-h-screen flex-col bg-background" data-user-id={user.id}>
+    <div className="flex min-h-screen flex-col bg-background">
       <SiteHeader />
       <main className="flex-1">
         <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
@@ -115,19 +116,25 @@ export default async function AppPage() {
           {/* Canvas + audit feed */}
           <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
             <Reveal delay={0.1}>
-              <MemoryCanvas />
+              <ErrorBoundary label="the memory canvas">
+                <MemoryCanvas />
+              </ErrorBoundary>
             </Reveal>
 
             {/* Live activity feed */}
             <Reveal delay={0.15}>
-              <ActivityFeed />
+              <ErrorBoundary label="the activity feed">
+                <ActivityFeed />
+              </ErrorBoundary>
             </Reveal>
           </div>
 
           {/* WebMCP tool-call simulator */}
           <Reveal delay={0.2}>
             <div className="mt-6">
-              <WebMCPTestPanel />
+              <ErrorBoundary label="the tool-call simulator">
+                <WebMCPTestPanel />
+              </ErrorBoundary>
             </div>
           </Reveal>
         </div>

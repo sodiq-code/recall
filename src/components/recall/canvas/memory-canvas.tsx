@@ -7,7 +7,6 @@ import {
   Brain,
   Tag as TagIcon,
   X,
-  Loader2,
   Inbox,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -15,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AddFactForm } from "./add-fact-form";
 import { FactCard } from "./fact-card";
 import type { Fact } from "@/lib/memory";
@@ -176,10 +176,7 @@ export function MemoryCanvas() {
       {/* Fact list */}
       <div className="mt-4">
         {showLoading ? (
-          <div className="flex min-h-[200px] flex-col items-center justify-center text-center">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            <p className="mt-2 text-sm text-muted-foreground">Loading your memory…</p>
-          </div>
+          <FactListSkeleton />
         ) : facts.length === 0 ? (
           <EmptyState isSearching={isSearching} search={debouncedSearch} />
         ) : (
@@ -220,6 +217,36 @@ function EmptyState({
           ? `No facts match "${search}". Try a different query or clear the search.`
           : "Add a fact manually above, or let your ChatGPT agent add one via the addFact WebMCP tool."}
       </p>
+    </div>
+  );
+}
+
+/** Skeleton placeholder for the fact list while loading. */
+function FactListSkeleton() {
+  return (
+    <div className="grid gap-2.5 sm:grid-cols-2">
+      {[...Array(4)].map((_, i) => (
+        <div
+          key={i}
+          className="rounded-xl border border-border/60 bg-card/50 p-4"
+        >
+          <div className="mb-2 flex items-center gap-2">
+            <Skeleton className="h-5 w-5 rounded-md" />
+            <Skeleton className="h-3 w-12" />
+            <Skeleton className="ml-auto h-3 w-6" />
+          </div>
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="mt-1.5 h-3 w-4/5" />
+          <div className="mt-3 flex gap-1">
+            <Skeleton className="h-4 w-14 rounded-full" />
+            <Skeleton className="h-4 w-10 rounded-full" />
+          </div>
+          <div className="mt-2 flex items-center gap-1">
+            <Skeleton className="h-2 w-2 rounded-full" />
+            <Skeleton className="h-2 w-16" />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
