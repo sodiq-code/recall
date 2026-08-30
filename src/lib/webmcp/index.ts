@@ -6,14 +6,14 @@
  * client components (the /app canvas).
  *
  * Spec reference (https://github.com/webmachinelearning/webmcp):
- *   - registerTool() returns a PROMISE that resolves when registration completes
- *   - The second argument is { signal: AbortSignal } — abort the signal to
- *     unregister the tool
- *   - Tool definitions include: name, description, inputSchema, execute,
- *     annotations, and exposedOrigins (the list of agent origins granted
- *     cross-origin access)
- *   - exposedOrigins is the spec's "exposed origins" field — it's how
- *     cross-origin agents (like chatgpt.com) are granted access
+ *   - registerTool(tool, options) returns Promise<void>
+ *   - The tool dictionary: { name, title?, description, inputSchema?, execute,
+ *     annotations? }
+ *   - The options dictionary: { exposedTo?: string[], signal?: AbortSignal }
+ *   - exposedTo goes in the OPTIONS (2nd arg), NOT on the tool definition
+ *   - execute is a ToolExecuteCallback: (inputObject, options) => MaybePromise<unknown>
+ *     where options is { signal: AbortSignal }
+ *   - The "tools" permissions-policy feature defaults to 'self'
  */
 
 import type {
@@ -23,24 +23,30 @@ import type {
 import { CHATGPT_AUDIENCE } from "@/lib/constants";
 
 /**
- * The shape of the browser's WebMCP `document.modelContext` surface.
- * Declared locally so we don't ship a types package for an emerging standard.
+ * The shape of the browser's WebMCP `document.modelContext` surface, matching
+ * the official webmcp-types package (https://www.npmjs.com/package/webmcp-types).
  */
+interface ModelContextTool {
+  name: string;
+  title?: string;
+  description: string;
+  inputSchema?: object;
+  execute: (inputObject: Record<string, unknown>, options: { signal: AbortSignal }) => Promise<unknown>;
+  annotations?: {
+    readOnlyHint?: boolean;
+    untrustedContentHint?: boolean;
+  };
+}
+
+interface ModelContextRegisterToolOptions {
+  exposedTo?: string[];
+  signal?: AbortSignal;
+}
+
 interface ModelContextApi {
   registerTool: (
-    def: {
-      name: string;
-      description: string;
-      inputSchema?: unknown;
-      execute: (input: unknown) => Promise<unknown>;
-      annotations?: {
-        readOnlyHint?: boolean;
-        untrustedContentHint?: boolean;
-      };
-      /** The origins granted cross-origin access to this tool. */
-      exposedOrigins?: string[];
-    },
-    options?: { signal?: AbortSignal },
+    tool: ModelContextTool,
+    options?: ModelContextRegisterToolOptions,
   ) => Promise<void>;
 }
 
@@ -62,12 +68,9 @@ export function isWebMCPSupported(): boolean {
  * awaits all registrations and returns a handle whose `unregister()` aborts
  * every tool's AbortController (tearing them down cleanly).
  *
- * When the browser does not support WebMCP, the call is a no-op.
- *
  * @param options.tools   the tool definitions to register
  * @param options.fromOrigins  cross-origin agent origins granted access;
- *   defaults to the ChatGPT in-app browser origin. Passed as `exposedOrigins`
- *   on each tool definition per the spec.
+ *   passed as `exposedTo` in the registerTool options per the spec.
  */
 export async function registerWebMCPTools(
   options: RegisterWebMCPToolsOptions,
@@ -81,7 +84,6 @@ export async function registerWebMCPTools(
   const abortControllers: AbortController[] = [];
   const registered: string[] = [];
 
-  // Register each tool. registerTool() returns a Promise; we await all of them.
   const registrationPromises = tools.map(async (tool) => {
     const ac = new AbortController();
     abortControllers.push(ac);
@@ -90,16 +92,18 @@ export async function registerWebMCPTools(
       await document.modelContext!.registerTool(
         {
           name: tool.name,
+          title: tool.title,
           description: tool.description,
           inputSchema: tool.inputSchema,
-          execute: tool.execute as (input: unknown) => Promise<unknown>,
+          execute: async (inputObject) => {
+            return tool.execute(inputObject);
+          },
           annotations: tool.annotations,
-          // exposedOrigins: the origins granted cross-origin access to this
-          // tool. This is the spec's "exposed origins" field — it's how
-          // chatgpt.com gets access to Recall's tools.
-          exposedOrigins: fromOrigins,
         },
-        { signal: ac.signal },
+        {
+          exposedTo: fromOrigins,
+          signal: ac.signal,
+        },
       );
       registered.push(tool.name);
     } catch (err) {
@@ -111,7 +115,6 @@ export async function registerWebMCPTools(
     }
   });
 
-  // Wait for all registrations to complete (or fail).
   await Promise.allSettled(registrationPromises);
 
   return {

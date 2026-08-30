@@ -18,7 +18,11 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: "Permissions-Policy",
-            value: "tools=(https://chatgpt.com)",
+            // The spec's default allowlist for the "tools" feature is 'self'.
+            // We add 'self' explicitly so the page can register and query its
+            // own tools, plus 'https://chatgpt.com' so the ChatGPT in-app
+            // browser can call them cross-origin.
+            value: "tools=(self https://chatgpt.com)",
           },
         ],
       },

@@ -33,10 +33,17 @@ export interface ToolAnnotations {
 /** A single WebMCP tool definition — matches `document.modelContext.registerTool()`. */
 export interface WebMCPToolDefinition<TInput = Record<string, unknown>, TResult = unknown> {
   name: string;
+  /** A human-readable title for the tool (shown in the agent's UI). */
+  title?: string;
   description: string;
   inputSchema: JsonSchema;
   annotations?: ToolAnnotations;
-  execute: (input: TInput) => Promise<TResult>;
+  /** The execute callback. Per the spec, takes (inputObject, options) where
+   *  options has { signal: AbortSignal }. */
+  execute: (
+    input: TInput,
+    options?: { signal: AbortSignal },
+  ) => Promise<TResult>;
 }
 
 /** The full registration bundle passed to `registerWebMCPTools`. */

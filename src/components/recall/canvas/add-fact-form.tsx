@@ -115,17 +115,15 @@ export function AddFactForm() {
       <form
         onSubmit={handleSubmit}
         className="p-4"
-        // Declarative WebMCP form annotation (blueprint §32, Day 7):
-        // The mcp-tool attribute tells a WebMCP-capable browser that this form
+        // Declarative WebMCP form annotation (per the spec's declarative-api-explainer):
+        // toolname + tooldescription tell a WebMCP-capable browser that this form
         // is ALSO a WebMCP tool. The browser synthesizes a JSON Schema from the
         // form's named fields, so the add-fact form is both an HTML form (for
         // the user) and a WebMCP tool (for the agent) — one code path, two
-        // consumers. The imperative registration in lib/webmcp handles the
-        // live tool calls; this declarative annotation is the spec-compliant
-        // fallback that works even without imperative registration.
-        data-mcp-tool="addFact"
-        data-mcp-description="Add a new fact to the user's memory vault."
-        data-mcp-untrusted="true"
+        // consumers. toolautosubmit lets the agent submit the form after filling.
+        toolname="addFact"
+        tooldescription="Add a new fact to the user's memory vault."
+        toolautosubmit
       >
         <Textarea
           value={content}
@@ -139,8 +137,8 @@ export function AddFactForm() {
           maxLength={LIMITS.FACT_MAX_LENGTH}
           aria-label="Fact content"
           name="content"
-          data-mcp-required="true"
-          data-mcp-maxlength={LIMITS.FACT_MAX_LENGTH}
+          toolparamdescription="The fact text, 1-500 characters."
+          required
         />
         {/* Hidden tags input for declarative WebMCP form annotation.
             Always in the DOM so a WebMCP-capable browser can synthesize the
@@ -149,9 +147,7 @@ export function AddFactForm() {
         <input
           type="hidden"
           name="tags"
-          data-mcp-type="array"
-          data-mcp-maxitems={LIMITS.TAG_MAX_PER_FACT}
-          data-mcp-description="Optional tags for the fact"
+          toolparamdescription="Optional tags for the fact (comma-separated, max 10)."
         />
         {isExpanded && (
           <div className="mt-3 space-y-3 border-t border-border/40 pt-3">

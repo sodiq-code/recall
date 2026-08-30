@@ -16,6 +16,8 @@ import type { JsonSchema, ToolAnnotations } from "./types";
 
 export interface ToolSpec {
   name: string;
+  /** A human-readable title for the tool (shown in the agent's UI). */
+  title: string;
   description: string;
   inputSchema: JsonSchema;
   annotations: ToolAnnotations;
@@ -28,6 +30,7 @@ export interface ToolSpec {
  * Read-only, trusted content.
  */
 export const queryTool: ToolSpec = {
+  title: "Query Memory",
   name: "query",
   description:
     "Retrieve relevant facts from the user's memory vault. Use when the user asks what you know about them, or when you need to check the user's stated preferences.",
@@ -62,6 +65,7 @@ export const queryTool: ToolSpec = {
  * Writes untrusted (agent-supplied) content.
  */
 export const addFactTool: ToolSpec = {
+  title: "Add Fact",
   name: "addFact",
   description:
     "Add a new fact to the user's memory vault. Use when the user states a preference, fact, or context about themselves that should be remembered.",
@@ -93,6 +97,7 @@ export const addFactTool: ToolSpec = {
  * Writes untrusted content.
  */
 export const updateFactTool: ToolSpec = {
+  title: "Update Fact",
   name: "updateFact",
   description:
     "Update an existing fact in the user's memory vault. Use to keep a fact current when the user corrects or refines a previously stored preference.",
@@ -124,6 +129,7 @@ export const updateFactTool: ToolSpec = {
  * forgetFact — soft-delete a fact (revocable via the audit log).
  */
 export const forgetFactTool: ToolSpec = {
+  title: "Forget Fact",
   name: "forgetFact",
   description:
     "Soft-delete a fact from the user's memory vault. Use when the user asks to forget or remove a specific fact. The action is recorded and reversible from the audit log.",
@@ -145,6 +151,7 @@ export const forgetFactTool: ToolSpec = {
  * only returns ranked facts (blueprint §25.2).
  */
 export const summarizeTool: ToolSpec = {
+  title: "Summarize Memory",
   name: "summarize",
   description:
     "Return a structured summary of the user's memory vault — the top N facts ranked by relevance. Use when the user asks to summarize what you know about them.",
@@ -175,6 +182,7 @@ export const summarizeTool: ToolSpec = {
  * Read-only, trusted.
  */
 export const timelineTool: ToolSpec = {
+  title: "Activity Timeline",
   name: "timeline",
   description:
     "Return a chronological list of recent agent actions on the user's memory vault. Use when the user asks what you have done with their memory lately.",
