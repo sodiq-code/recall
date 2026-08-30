@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Github, BookOpen } from "lucide-react";
+import { Github, BookOpen, PlayCircle } from "lucide-react";
 import { RecallMark } from "./recall-mark";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,17 @@ export function SiteHeader() {
         </Link>
 
         <nav className="flex items-center gap-0.5 sm:gap-1" aria-label="Primary">
+          <Button
+            variant="ghost"
+            size="sm"
+            asChild
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <Link href="/playground">
+              <PlayCircle className="mr-1.5 h-4 w-4" />
+              <span className="hidden sm:inline">Playground</span>
+            </Link>
+          </Button>
           <Button
             variant="ghost"
             size="sm"

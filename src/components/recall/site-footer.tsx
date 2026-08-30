@@ -28,6 +28,7 @@ export function SiteFooter() {
             title="Product"
             links={[
               { label: "Overview", href: "/" },
+              { label: "Tool playground", href: "/playground" },
               { label: "Docs", href: "/docs" },
               { label: "Memory canvas", href: "/app" },
               { label: "Settings", href: "/app/settings" },

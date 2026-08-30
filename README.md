@@ -73,6 +73,12 @@ annotations so the agent knows how it may use it.
    real time, signed and reversible. Export the whole log as a verifiable
    JSON bundle.
 
+> **Try it without ChatGPT.** The interactive
+> [Tool Playground](#try-the-tools) (`/playground`) lets you call each of
+> the six tools against an in-memory demo vault — the same response shape
+> ChatGPT would receive, with the same audit-trail provenance. No sign-in
+> required.
+
 ## Architecture
 
 ```
@@ -187,8 +193,9 @@ src/
       auth/oauth/github/ #   GitHub OAuth flow (Day 2)
       route.ts           #   self-describing API manifest
     health/route.ts      # /health — health check
+    playground/          # /playground — interactive WebMCP tool playground
     docs/                # /docs — one-page developer doc
-    page.tsx             # / — landing page
+    page.tsx             # / — landing page (incl. inline tool playground)
     layout.tsx           # root layout (theme provider, metadata)
     not-found.tsx        # branded 404
   components/
@@ -197,6 +204,7 @@ src/
     ui/                  # shadcn/ui primitives
   lib/
     webmcp/              # WebMCP tool definitions + registration entrypoint
+    demo/                # in-memory demo vault + simulated tool executor
     auth/                # session helpers (Day 2)
     audit/               # audit-log append/list (Day 5, 7)
     capability/          # capability token issue/verify (Day 6)
@@ -234,7 +242,9 @@ See [`SECURITY.md`](./SECURITY.md) for the full threat model.
 - **WebMCP Leverage** — exercises seven distinct WebMCP features in 30 lines
   of registration code: imperative tool registration, the six-tool surface,
   `readOnlyHint`, `untrustedContentHint`, `fromOrigins` cross-origin grant,
-  browser-mediated session, and audit-log integration.
+  browser-mediated session, and audit-log integration. The interactive
+  `/playground` lets judges explore the full tool surface hands-on without
+  ChatGPT or a sign-in.
 - **Execution** — a complete, coherent product experience, not a technical
   proof of concept.
 - **Potential Impact** — every ChatGPT Plus/Pro/Team user (~100M+ MAU) is a

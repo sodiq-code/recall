@@ -206,3 +206,109 @@ Keys required across the full build:
 
 Conclusion: Day 1 is complete and pushed. Awaiting the user's go-ahead to
 begin Task 2 (GitHub OAuth + user creation).
+
+---
+Task ID: review-202608300829
+Agent: Z.ai Code (orchestrator, cron review)
+Task: Scheduled 15-min review — assess status, QA, fix bugs, advance development (styling + features mandatory). Constraint: user is holding GitHub OAuth credentials until go-ahead, so Task 2 (GitHub OAuth) is NOT started; instead advance self-contained enhancements within Task 1 scope.
+
+Work Log:
+- Reviewed worklog.md (Task 1 + 1-polish + 1-completion). Status: Day 1
+  complete and pushed to https://github.com/sodiq-code/recall (commit a5e014c,
+  MIT, 14 topics). Awaiting user's GitHub OAuth credentials for Task 2.
+- QA pass: `bun run lint` 0/0, `bun run typecheck` clean, dev server healthy,
+  all endpoints expected codes (/health 200, /api 200, / 200, /docs 200,
+  /api/memory 501). Agent-browser: 0 console errors, 0 page errors on landing.
+  Mobile (390x844) no horizontal overflow. No bugs found.
+- Note: the dev server process was reaped by the environment mid-review; I
+  restarted it (`bun run dev` backgrounded) to complete the browser QA. After
+  restart all endpoints returned 200 and the playground rendered + interactive
+  calls worked end-to-end.
+- Designed + built the headline new feature: **Interactive WebMCP Tool
+  Playground** — lets a visitor (or a judge) play the agent and call each of
+  the six WebMCP tools against an in-memory demo vault, no sign-in required.
+  This directly boosts the "WebMCP Leverage" judging criterion.
+  - lib/demo/mock-memory.ts — 7 seed facts (clearly labelled demo:true per
+    blueprint §24.5), 3 seed audit entries, and executeDemoToolCall() which
+    implements the SAME deterministic logic the real handlers will use on
+    Days 3-5 (substring+tag match for query, top-N by relevanceScore for
+    summarize, audit sort for timeline). addFact/updateFact/forgetFact
+    return honest "would_add"/"would_update"/"would_forget" shapes that
+    describe what the real handler will do. Every simulated call also
+    returns a simulated audit entry (callerOrigin, toolName, args,
+    resultCount, resultHash, timestamp).
+  - components/recall/playground/tool-playground.tsx — the interactive UI:
+    tool selector (6 tools with icons + read-only/writes/untrusted hints),
+    per-tool header (name, description, readOnlyHint/untrustedContentHint
+    badges), editable args JSON textarea (pre-filled with per-tool examples,
+    reset button, copy button, parse-error surfacing), JSON Schema viewer
+    (read-only, the actual inputSchema), "Call <tool>()" button with a
+    220ms simulated round-trip loading state, and a results panel that
+    shows the response JSON + a signed-styled audit entry card + latency
+    badge. A demo memory vault footer lists the 7 seed facts with
+    source/origin/score.
+  - components/recall/landing/try-the-tools.tsx — wraps the playground as a
+    "Try the tools" section on the landing page (placed after the static
+    six-tools grid so the visitor sees the contract, then gets to use it).
+  - app/playground/page.tsx — dedicated /playground route (distraction-free,
+    direct-linkable version) with a back-link and Reveal animations.
+- Wired the playground into nav: header "Playground" link (with PlayCircle
+  icon), footer "Tool playground" link in the Product column, and a "Try the
+  tools" section in /docs.
+- Updated README.md: added a "Try it without ChatGPT" callout in the How it
+  works section, documented the /playground route and lib/demo/ in the
+  project structure, and noted the playground as a WebMCP Leverage boost in
+  "What this project demonstrates".
+- Styling improvements: the playground uses the existing emerald/amber
+  palette (primary for active tool + audit card border, accent for
+  agent-source fact dots), motion-primitives Reveal for entrance, and
+  shadcn/ui components (Textarea, ScrollArea, Badge, Button). No indigo/blue.
+
+Verification (this round):
+- ✅ `bun run lint` — 0 errors, 0 warnings
+- ✅ `bun run typecheck` — tsc --noEmit clean
+- ✅ / 200, /playground 200, /health 200, /api 200, /docs 200 (all endpoints)
+- ✅ Landing HTML contains "WebMCP Tool Playground", "Try the tools",
+  "Call args", "demo memory vault" markers (curl grep)
+- ✅ /playground HTML contains "inputSchema", "demo memory vault" markers
+- ✅ agent-browser on /playground: 0 console errors, 0 page errors, title
+  correct
+- ✅ Interactive: clicked "Call query()" with {query:"hobbies"} → returned
+  1 matching fact (Hobbies: rock climbing…), full result JSON, and a signed
+  audit-entry card. Then switched to addFact (aria-pressed toggled true,
+  args auto-updated to the addFact example, button became "Call
+  addFact()"), called it → returned {status:"would_add", fact:{source:
+  "agent", sourceOrigin:"chatgpt.com", demo:true}, note}. Both tools
+  behave exactly as the blueprint specifies.
+- ✅ Mobile (390x844) on /playground: docWidth === viewportWidth === 390,
+  overflow=false (no horizontal scroll)
+- ✅ Screenshot captured: /home/z/my-project/upload/recall-playground-result.png
+
+Stage Summary:
+- The Recall scaffold now ships an interactive, self-contained demonstration
+  of the full WebMCP tool surface. A judge can land on / or /playground and
+  call every one of the six tools hands-on — seeing the JSON Schema, the
+  annotations, the response shape, and the audit-trail provenance — without
+  needing ChatGPT, a sign-in, or the GitHub OAuth credentials the user is
+  holding. This is a meaningful boost to the WebMCP Leverage and Execution
+  judging criteria and a strong demo-day asset (it works even if ChatGPT's
+  WebMCP integration has a demo-day outage, which the blueprint flags as the
+  #1 hackathon risk).
+- No backend, auth, or persistence was touched — the playground is entirely
+  client-side against an in-memory demo vault, so it does not conflict with
+  the user's "wait for go-ahead before Task 2" instruction.
+- All existing Task 1 contracts (lib/webmcp/tools.ts, the six tool schemas,
+  the audit/capability/session stubs) are unchanged; the playground reuses
+  ALL_TOOLS and getToolSpec so it is never out of sync with the canonical
+  tool surface.
+
+Next phase priority recommendations:
+1. Task 2 (GitHub OAuth + user creation) — BLOCKED on user providing a
+   GitHub OAuth App (Client ID + Secret) and the Vercel production URL for
+   the callback. Once provided, wire /login, /auth/callback, /app and the
+   session flow.
+2. Until then, the next self-contained advance is wiring the /app memory
+   canvas UI (Day 3) to use the SAME demo vault as the playground, so a
+   visitor can see and edit the memory canvas without auth — a natural
+   extension that keeps the demo self-contained.
+

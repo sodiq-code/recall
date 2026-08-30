@@ -4,6 +4,7 @@ import { Hero } from "@/components/recall/landing/hero";
 import { Problem } from "@/components/recall/landing/problem";
 import { Inversion } from "@/components/recall/landing/inversion";
 import { ToolsGrid } from "@/components/recall/landing/tools-grid";
+import { TryTheTools } from "@/components/recall/landing/try-the-tools";
 import { HowItWorks } from "@/components/recall/landing/how-it-works";
 import { Stack } from "@/components/recall/landing/stack";
 import { CtaBand } from "@/components/recall/landing/cta-band";
@@ -31,6 +32,7 @@ export default function LandingPage() {
         <Problem />
         <Inversion />
         <ToolsGrid />
+        <TryTheTools />
         <HowItWorks />
         <Stack />
         <CtaBand />

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BookOpen, Code2, Lock, ScrollText } from "lucide-react";
+import { ArrowRight, BookOpen, Code2, Lock, PlayCircle, ScrollText } from "lucide-react";
 import { SiteHeader } from "@/components/recall/site-header";
 import { SiteFooter } from "@/components/recall/site-footer";
 import { ALL_TOOLS } from "@/lib/webmcp/tools";
@@ -32,6 +32,26 @@ export default function DocsPage() {
             through the browser — origin-scoped, capability-token
             authenticated, and fully audited.
           </p>
+
+          <section className="mt-12 space-y-4">
+            <h2 className="flex items-center gap-2 text-xl font-medium">
+              <PlayCircle className="h-5 w-5 text-primary" />
+              Try the tools
+            </h2>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              The interactive{" "}
+              <Link
+                href="/playground"
+                className="font-medium text-primary hover:underline"
+              >
+                WebMCP Tool Playground
+              </Link>{" "}
+              lets you call each of the six tools against an in-memory demo
+              vault — the same response shape ChatGPT would receive, with the
+              same audit-trail provenance. No sign-in required; no data leaves
+              your browser.
+            </p>
+          </section>
 
           <section className="mt-12 space-y-4">
             <h2 className="flex items-center gap-2 text-xl font-medium">
