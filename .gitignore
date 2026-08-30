@@ -65,5 +65,5 @@ prompt
 /skills
 /.zscripts
 /tool-results
-# mini-services are scaffolded per-day; committed when they ship (Day 5)
-/mini-services
+# mini-services node_modules (the realtime service ships its own package.json)
+/mini-services/*/node_modules

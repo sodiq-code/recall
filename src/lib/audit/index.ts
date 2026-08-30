@@ -32,8 +32,6 @@ export type SanitizedArgs = Record<string, unknown>;
  * result body.
  */
 export function computeResultHash(result: unknown): string {
-  // Canonical JSON with sorted top-level keys so the hash is stable regardless
-  // of the order the tool handler assembled the result object in.
   const value =
     result && typeof result === "object" && !Array.isArray(result)
       ? (result as Record<string, unknown>)
@@ -60,19 +58,22 @@ export async function appendAuditEntry(input: {
   signature?: string;
 }) {
   const hash = computeResultHash(input.result);
-  const entry = await db.auditEntry.create({
-    data: {
-      userId: input.userId,
-      callerOrigin: input.callerOrigin,
-      toolName: input.toolName,
-      argsJson: JSON.stringify(input.args),
-      resultCount: input.resultCount,
-      resultHash: hash,
-      capabilityTokenId: input.capabilityTokenId ?? null,
-      signature: input.signature ?? "unsigned",
-    },
+  const id = crypto.randomUUID();
+  await db.execute({
+    sql: `INSERT INTO AuditEntry (id, userId, timestamp, callerOrigin, toolName, argsJson, resultCount, resultHash, capabilityTokenId, signature) VALUES (?, ?, datetime('now'), ?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      id,
+      input.userId,
+      input.callerOrigin,
+      input.toolName,
+      JSON.stringify(input.args),
+      input.resultCount,
+      hash,
+      input.capabilityTokenId ?? null,
+      input.signature ?? "unsigned",
+    ],
   });
-  return entry;
+  return { id, resultHash: hash };
 }
 
 /**
@@ -83,22 +84,30 @@ export async function listAuditEntries(
   userId: string,
   limit = 50,
 ): Promise<AuditEntryView[]> {
-  const rows = await db.auditEntry.findMany({
-    where: { userId },
-    orderBy: { timestamp: "desc" },
-    take: Math.min(limit, 1000),
+  const result = await db.execute({
+    sql: `SELECT id, timestamp, callerOrigin, toolName, argsJson, resultCount, resultHash, capabilityTokenId, signature FROM AuditEntry WHERE userId = ? ORDER BY timestamp DESC LIMIT ?`,
+    args: [userId, Math.min(limit, 1000)],
   });
-  return rows.map((r) => ({
-    id: r.id,
-    timestamp: r.timestamp.getTime(),
-    callerOrigin: r.callerOrigin,
-    toolName: r.toolName as ToolName,
-    args: JSON.parse(r.argsJson) as SanitizedArgs,
-    resultCount: r.resultCount,
-    resultHash: r.resultHash,
-    capabilityTokenId: r.capabilityTokenId,
-    signature: r.signature,
-  }));
+
+  return result.rows.map((row) => {
+    const r = row as Record<string, unknown>;
+    const ts = r.timestamp;
+    const tsDate =
+      ts instanceof Date
+        ? ts
+        : new Date(typeof ts === "string" ? ts.replace(" ", "T") + "Z" : Date.now());
+    return {
+      id: r.id as string,
+      timestamp: tsDate.getTime(),
+      callerOrigin: r.callerOrigin as string,
+      toolName: r.toolName as ToolName,
+      args: JSON.parse((r.argsJson as string) ?? "{}") as SanitizedArgs,
+      resultCount: r.resultCount as number,
+      resultHash: r.resultHash as string,
+      capabilityTokenId: (r.capabilityTokenId as string | null) ?? null,
+      signature: r.signature as string,
+    };
+  });
 }
 
 export interface AuditEntryView {

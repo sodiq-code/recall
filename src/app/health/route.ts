@@ -18,7 +18,8 @@ export async function GET() {
   const startedAt = Date.now();
   try {
     // A trivial query — fails fast if the database is unreachable.
-    await db.user.count({ take: 1 });
+    const result = await db.execute("SELECT COUNT(*) as c FROM User LIMIT 1");
+    const count = (result.rows[0] as unknown as { c: number | bigint })?.c;
     return NextResponse.json(
       {
         status: "ok",
@@ -27,6 +28,7 @@ export async function GET() {
         timestamp: new Date().toISOString(),
         uptimeMs: Date.now() - startedAt,
         database: "connected",
+        userCount: typeof count === "bigint" ? Number(count) : count,
       },
       { status: 200 },
     );
@@ -38,7 +40,7 @@ export async function GET() {
         version: APP_VERSION,
         timestamp: new Date().toISOString(),
         database: "unreachable",
-        error: err instanceof Error ? err.message : "unknown",
+        error: err instanceof Error ? err.message.slice(0, 500) : "unknown",
       },
       { status: 503 },
     );

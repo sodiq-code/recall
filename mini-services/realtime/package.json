@@ -1,0 +1,12 @@
+{
+  "name": "recall-realtime",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Recall realtime WebSocket mini-service — broadcasts audit events to open Recall tabs.",
+  "scripts": {
+    "dev": "bun --hot index.ts"
+  },
+  "dependencies": {
+    "socket.io": "^4.8.1"
+  }
+}

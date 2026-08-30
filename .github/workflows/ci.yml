@@ -59,8 +59,14 @@ jobs:
 
       - name: Build
         env:
+          TURSO_DATABASE_URL: "libsql://ci-placeholder.turso.io"
+          TURSO_AUTH_TOKEN: "ci-placeholder-token"
           DATABASE_URL: "file:/tmp/recall-ci.db"
+          DIRECT_DATABASE_URL: "file:/tmp/recall-ci.db"
           SESSION_SECRET: "ci-placeholder-secret-32-chars-minimum-ok"
+          GITHUB_CLIENT_ID: "ci-placeholder-client-id"
+          GITHUB_CLIENT_SECRET: "ci-placeholder-client-secret"
           NEXT_PUBLIC_SITE_URL: "http://localhost:3000"
           NEXT_PUBLIC_SITE_NAME: "Recall"
+          REALTIME_PORT: "3003"
         run: bun run build

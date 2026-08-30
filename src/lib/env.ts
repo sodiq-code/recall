@@ -12,7 +12,11 @@ import { z } from "zod";
  * Secrets are NEVER shipped to the client. This module is server-only.
  */
 const envSchema = z.object({
-  // --- Database ---
+  // --- Database (Turso / libSQL) ---
+  // The runtime connection uses TURSO_DATABASE_URL + TURSO_AUTH_TOKEN.
+  // DATABASE_URL is used by the Prisma CLI for schema validation (local file).
+  TURSO_DATABASE_URL: z.string().min(1, "TURSO_DATABASE_URL is required"),
+  TURSO_AUTH_TOKEN: z.string().min(1, "TURSO_AUTH_TOKEN is required"),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
 
   // --- Site identity ---
@@ -27,10 +31,8 @@ const envSchema = z.object({
   NEXT_PUBLIC_SITE_NAME: z.string().default("Recall"),
 
   // --- Auth (GitHub OAuth — demo-day substitute for ChatGPT OAuth) ---
-  // Required from Day 2 onward. Optional for the Day 1 scaffold so /health
-  // and the landing page run without an OAuth app configured.
-  GITHUB_CLIENT_ID: z.string().optional(),
-  GITHUB_CLIENT_SECRET: z.string().optional(),
+  GITHUB_CLIENT_ID: z.string().min(1, "GITHUB_CLIENT_ID is required"),
+  GITHUB_CLIENT_SECRET: z.string().min(1, "GITHUB_CLIENT_SECRET is required"),
   // Random 32+ char string used to sign the session cookie.
   SESSION_SECRET: z.string().min(16, "SESSION_SECRET must be at least 16 chars"),
 

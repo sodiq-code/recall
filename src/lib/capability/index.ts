@@ -53,17 +53,15 @@ export async function issueCapability(
   const audience = opts.audience ?? CHATGPT_AUDIENCE;
   const scope = opts.scope ?? [];
   const expiresAt = new Date(Date.now() + ttl * 1000);
+  const expiresAtIso = expiresAt.toISOString().replace("T", " ").replace("Z", "");
+  const id = crypto.randomUUID();
 
-  const token = await db.capabilityToken.create({
-    data: {
-      userId: opts.userId,
-      audience,
-      scopeJson: JSON.stringify(scope),
-      expiresAt,
-    },
+  await db.execute({
+    sql: `INSERT INTO CapabilityToken (id, userId, audience, scopeJson, issuedAt, expiresAt) VALUES (?, ?, ?, ?, datetime('now'), ?)`,
+    args: [id, opts.userId, audience, JSON.stringify(scope), expiresAtIso],
   });
 
-  return { id: token.id, audience, scope, expiresAt };
+  return { id, audience, scope, expiresAt };
 }
 
 /**
@@ -77,29 +75,39 @@ export async function verifyCapability(
   toolName: ToolName,
   expectedAudience?: string,
 ): Promise<VerifiedCapability | null> {
-  const token = await db.capabilityToken.findUnique({ where: { id: tokenId } });
-  if (!token) return null;
-  if (token.revokedAt) return null;
-  if (token.expiresAt.getTime() < Date.now()) return null;
-  if (expectedAudience && token.audience !== expectedAudience) return null;
+  const result = await db.execute({
+    sql: `SELECT id, userId, audience, scopeJson, expiresAt, revokedAt FROM CapabilityToken WHERE id = ?`,
+    args: [tokenId],
+  });
 
-  const scope = JSON.parse(token.scopeJson) as ToolName[];
+  if (result.rows.length === 0) return null;
+  const row = result.rows[0] as Record<string, unknown>;
+  if (row.revokedAt) return null;
+
+  const expiresAtStr = row.expiresAt as string;
+  const expiresAt = new Date(expiresAtStr.replace(" ", "T") + "Z");
+  if (expiresAt.getTime() < Date.now()) return null;
+
+  const audience = row.audience as string;
+  if (expectedAudience && audience !== expectedAudience) return null;
+
+  const scope = JSON.parse((row.scopeJson as string) ?? "[]") as ToolName[];
   if (scope.length > 0 && !scope.includes(toolName)) return null;
 
   return {
-    userId: token.userId,
-    audience: token.audience,
+    userId: row.userId as string,
+    audience,
     scope,
-    capabilityTokenId: token.id,
-    expiresAt: token.expiresAt,
+    capabilityTokenId: row.id as string,
+    expiresAt,
   };
 }
 
 /** Revoke a capability token (used when the user disables a tool). */
 export async function revokeCapability(tokenId: string): Promise<void> {
-  await db.capabilityToken.update({
-    where: { id: tokenId },
-    data: { revokedAt: new Date() },
+  await db.execute({
+    sql: `UPDATE CapabilityToken SET revokedAt = datetime('now') WHERE id = ?`,
+    args: [tokenId],
   });
 }
 

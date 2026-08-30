@@ -1,26 +1,28 @@
-/**
- * Recall — session helpers (foundation; fully wired on Day 2).
- *
- * On Day 1 this module establishes the session contract used by every
- * authenticated route and the WebMCP tool handlers: a server-side session
- * keyed by an opaque, cryptographically-random cookie token. The
- * GitHub-OAuth-backed implementation lands on Day 2.
- *
- * Design notes (blueprint §21.1, §26.2):
- *   - The session cookie is httpOnly + sameSite=lax; the value is an opaque
- *     token, not a JWT, so revoking a session is a single row delete.
- *   - `getSession()` returns the user for the current request or null. It is
- *     the single entry point every route uses — there is no other auth check.
- *   - The WebMCP tool handlers re-derive the caller origin and capability
- *     token (Day 6); the session is the human user, the capability token is
- *     the agent.
- */
 import { cookies } from "next/headers";
+import { randomBytes } from "node:crypto";
 import { db } from "@/lib/db";
 import { SESSION_COOKIE } from "@/lib/constants";
 
-/** The authenticated user shape surfaced to routes and components. */
+/**
+ * Recall — session helpers.
+ *
+ * A server-side session keyed by an opaque, cryptographically-random cookie
+ * token. The session row lives in Turso; the cookie value is the token (not a
+ * JWT) so revoking a session is a single row delete.
+ *
+ * The session is the human user; the capability token (lib/capability) is the
+ * agent. Both are checked on every authenticated request.
+ */
+
 export interface SessionUser {
+  id: string;
+  email: string;
+  name: string | null;
+  avatarUrl: string | null;
+  oauthProvider: string;
+}
+
+interface UserRow {
   id: string;
   email: string;
   name: string | null;
@@ -31,43 +33,48 @@ export interface SessionUser {
 /**
  * Read the session for the current request.
  *
- * Day 1: queries the Session table for a non-expired, non-revoked token. The
- * token comes from the session cookie. Returns null when there is no session,
- * the token is unknown, or the session has expired.
+ * Returns null when there is no session cookie, the token is unknown, or the
+ * session has expired.
  */
 export async function getSessionUser(): Promise<SessionUser | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (!token) return null;
 
-  const session = await db.session.findUnique({
-    where: { token },
-    include: { user: true },
+  const result = await db.execute({
+    sql: `
+      SELECT u.id, u.email, u.name, u.avatarUrl, u.oauthProvider
+      FROM Session s
+      JOIN "User" u ON u.id = s.userId
+      WHERE s.token = ? AND s.expiresAt > datetime('now')
+    `,
+    args: [token],
   });
-  if (!session) return null;
-  if (session.expiresAt.getTime() < Date.now()) return null;
 
+  if (result.rows.length === 0) return null;
+  const row = result.rows[0] as unknown as UserRow;
   return {
-    id: session.user.id,
-    email: session.user.email,
-    name: session.user.name,
-    avatarUrl: session.user.avatarUrl,
-    oauthProvider: session.user.oauthProvider,
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    avatarUrl: row.avatarUrl,
+    oauthProvider: row.oauthProvider,
   };
 }
 
 /**
  * Create a session for a user and set the session cookie on the response.
  *
- * Returns the opaque token. Day 2 wires this into the GitHub OAuth callback.
+ * Returns the opaque token.
  */
 export async function createSession(userId: string): Promise<string> {
-  const { randomBytes } = await import("node:crypto");
   const token = randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 7); // 7 days
+  const expiresAtIso = expiresAt.toISOString().replace("T", " ").replace("Z", "");
 
-  await db.session.create({
-    data: { userId, token, expiresAt },
+  await db.execute({
+    sql: `INSERT INTO Session (id, userId, token, createdAt, expiresAt) VALUES (?, ?, ?, datetime('now'), ?)`,
+    args: [crypto.randomUUID(), userId, token, expiresAtIso],
   });
 
   const cookieStore = await cookies();
@@ -87,7 +94,7 @@ export async function destroySession(): Promise<void> {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (token) {
-    await db.session.deleteMany({ where: { token } }).catch(() => {});
+    await db.execute({ sql: `DELETE FROM Session WHERE token = ?`, args: [token] }).catch(() => {});
   }
   cookieStore.delete(SESSION_COOKIE);
 }

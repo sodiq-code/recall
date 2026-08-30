@@ -120,7 +120,9 @@ annotations so the agent knows how it may use it.
 - **[Next.js 16](https://nextjs.org/)** — App Router, React Server Components
 - **[WebMCP](https://webmcp.devpost.com/)** — `document.modelContext` tool surface
 - **[Tailwind CSS 4](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/)** — accessible, composable primitives
-- **[Prisma](https://www.prisma.io/)** — type-safe persistence (SQLite → Postgres)
+- **[Turso](https://turso.tech/) (libSQL)** — edge-replicated SQLite database (works on Vercel serverless AND locally)
+- **[socket.io](https://socket.io/)** — real-time WebSocket fan-out (mini-service)
+- **[GitHub OAuth](https://docs.github.com/en/apps/oauth-building-authentication-apps)** — demo-day substitute for ChatGPT OAuth
 - **[WebCrypto](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API)** — capability tokens + signed audit log
 - **[GitHub Actions](https://github.com/features/actions)** — lint · typecheck · build on every PR
 
@@ -133,12 +135,14 @@ alternative is documented in the source.
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) 20+ or [Bun](https://bun.sh/) 1.1+
-- A GitHub OAuth app (for Day 2+ auth — see `.env.example`)
+- A [Turso](https://turso.tech/) database (free tier) — the connection URL + auth token
+- A [GitHub OAuth app](https://github.com/settings/developers) (for auth — see `.env.example`)
 
 ### Install
 
 ```bash
-bun install
+bun install                          # main app
+cd mini-services/realtime && bun install  # realtime WebSocket mini-service
 ```
 
 ### Configure
@@ -149,25 +153,35 @@ Copy the environment template and fill in the secrets:
 cp .env.example .env
 ```
 
-The Day 1 scaffold runs with just `DATABASE_URL` and `SESSION_SECRET`. GitHub
-OAuth credentials (`GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`) are required
-from Day 2 onward.
+You need:
+- `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` — from your Turso dashboard
+- `GITHUB_CLIENT_ID` + `GITHUB_CLIENT_SECRET` — from your GitHub OAuth app
+- `SESSION_SECRET` — generate with `openssl rand -hex 32`
 
 ### Database
 
+The schema is pushed to Turso via the `@libsql/client` (the Prisma CLI can't
+push directly to libSQL). The schema is defined in `prisma/schema.prisma` as
+the source of truth; the DDL is applied with:
+
 ```bash
-bun run db:push     # create/migrate the SQLite schema
-bun run db:generate # regenerate the Prisma client
+bun run db:push     # push the schema to the local migration DB (Prisma CLI)
+bun run db:generate # regenerate the Prisma client (for types)
 ```
+
+To push the schema to Turso, run the DDL via the libSQL client (see the
+task-2 worklog entry for the exact command).
 
 ### Develop
 
 ```bash
-bun run dev         # http://localhost:3000
+bun run dev                                        # main app on :3000
+cd mini-services/realtime && bun run dev           # realtime on :3003
 ```
 
-Visit [`/health`](http://localhost:3000/health) for the health check and
-[`/api`](http://localhost:3000/api) for the self-describing API manifest.
+Visit [`/health`](http://localhost:3000/health) for the health check,
+[`/login`](http://localhost:3000/login) to sign in via GitHub OAuth, and
+[`/app`](http://localhost:3000/app) for the memory canvas (requires a session).
 
 ### Scripts
 
@@ -186,13 +200,16 @@ Visit [`/health`](http://localhost:3000/health) for the health check and
 src/
   app/
     api/                 # HTTP + WebMCP tool-handler API routes
-      memory/            #   memory CRUD + query/summarize (Day 3-5)
-      audit/             #   audit feed + signed export (Day 5, 7)
-      capability-token/  #   capability token issue/verify (Day 6)
-      permissions/        #   per-tool enable + granted origins (Day 6)
-      auth/oauth/github/ #   GitHub OAuth flow (Day 2)
+      memory/            #   memory CRUD + query/summarize (next tasks)
+      audit/             #   audit feed + signed export (next tasks)
+      capability-token/  #   capability token issue/verify (next tasks)
+      permissions/        #   per-tool enable + granted origins (next tasks)
+      auth/oauth/github/ #   GitHub OAuth flow (start + callback)
+      auth/logout/       #   session destruction
       route.ts           #   self-describing API manifest
     health/route.ts      # /health — health check
+    login/               # /login — GitHub OAuth sign-in
+    app/                 # /app — memory canvas (session-gated)
     playground/          # /playground — interactive WebMCP tool playground
     docs/                # /docs — one-page developer doc
     page.tsx             # / — landing page (incl. inline tool playground)
@@ -205,18 +222,20 @@ src/
   lib/
     webmcp/              # WebMCP tool definitions + registration entrypoint
     demo/                # in-memory demo vault + simulated tool executor
-    auth/                # session helpers (Day 2)
-    audit/               # audit-log append/list (Day 5, 7)
-    capability/          # capability token issue/verify (Day 6)
-    security/            # site signing key — WebCrypto (Day 6, 7)
+    auth/                # GitHub OAuth + session helpers
+    audit/               # audit-log append/list (next tasks)
+    capability/          # capability token issue/verify (next tasks)
+    security/            # site signing key — WebCrypto (next tasks)
     constants.ts        # tool names, origins, validation bounds
-    env.ts               # typed environment access
-    db.ts                # Prisma client singleton
+    env.ts               # typed environment access (zod-validated)
+    db.ts                # Turso (libSQL) database access layer
 prisma/
   schema.prisma          # User, Fact, FactTag, AuditEntry, CapabilityToken,
-                        #   PermissionState, Session
+                        #   PermissionState, Session (source of truth for DDL)
+mini-services/
+  realtime/              # socket.io WebSocket mini-service (port 3003)
 .github/workflows/
-  ci.yml                 # lint + typecheck on every push/PR
+  ci.yml                 # lint + typecheck + build on every push/PR
 ```
 
 ## The security model

@@ -10,10 +10,6 @@
  * usable CryptoKey for the given user (generating + persisting one if none
  * exists). Day 6 uses it to sign capability tokens; Day 7 uses it to sign the
  * audit-export bundle.
- *
- * Blueprint §21.1: "the site's key is the same key that signs the TLS cert, so
- * the signature is structurally tied to the origin." We approximate that
- * invariant by deriving a per-user key so multi-tenant isolation holds.
  */
 import { db } from "@/lib/db";
 
@@ -29,11 +25,16 @@ export async function getSiteKey(userId: string): Promise<CryptoKey> {
   const cached = keyCache.get(userId);
   if (cached) return cached;
 
-  const user = await db.user.findUnique({ where: { id: userId } });
-  if (user?.siteKeyJwk) {
+  const result = await db.execute({
+    sql: `SELECT siteKeyJwk FROM "User" WHERE id = ?`,
+    args: [userId],
+  });
+
+  const row = result.rows[0] as unknown as { siteKeyJwk: string | null } | undefined;
+  if (row?.siteKeyJwk) {
     const key = await crypto.subtle.importKey(
       "jwk",
-      JSON.parse(user.siteKeyJwk) as JsonWebKey,
+      JSON.parse(row.siteKeyJwk) as JsonWebKey,
       { name: "ECDSA", namedCurve: "P-256" },
       true,
       ["sign"],
@@ -50,9 +51,9 @@ export async function getSiteKey(userId: string): Promise<CryptoKey> {
   )) as WebCryptoKey & CryptoKey;
 
   const jwk = await crypto.subtle.exportKey("jwk", keyPair);
-  await db.user.update({
-    where: { id: userId },
-    data: { siteKeyJwk: JSON.stringify(jwk) },
+  await db.execute({
+    sql: `UPDATE "User" SET siteKeyJwk = ? WHERE id = ?`,
+    args: [JSON.stringify(jwk), userId],
   });
   keyCache.set(userId, keyPair);
   return keyPair;
@@ -87,11 +88,14 @@ export async function verifyWithSiteKey(
   payload: unknown,
   signature: string,
 ): Promise<boolean> {
-  const user = await db.user.findUnique({ where: { id: userId } });
-  if (!user?.siteKeyJwk) return false;
+  const result = await db.execute({
+    sql: `SELECT siteKeyJwk FROM "User" WHERE id = ?`,
+    args: [userId],
+  });
+  const row = result.rows[0] as unknown as { siteKeyJwk: string | null } | undefined;
+  if (!row?.siteKeyJwk) return false;
 
-  const jwk = JSON.parse(user.siteKeyJwk) as JsonWebKey;
-  // importKey needs the verify usage; re-import the public component.
+  const jwk = JSON.parse(row.siteKeyJwk) as JsonWebKey;
   const key = await crypto.subtle.importKey(
     "jwk",
     { ...jwk, key_ops: ["verify"] },

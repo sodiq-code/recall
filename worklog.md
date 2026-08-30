@@ -312,3 +312,96 @@ Next phase priority recommendations:
    visitor can see and edit the memory canvas without auth — a natural
    extension that keeps the demo self-contained.
 
+
+---
+Task ID: 2
+Agent: Z.ai Code (orchestrator)
+Task: GitHub OAuth + user creation (blueprint §32, Day 2)
+
+Work Log:
+- Switched the database from local SQLite to Turso (libSQL) so the same
+  schema works on Vercel serverless AND in local dev. Installed
+  @libsql/client; the runtime db layer (lib/db.ts) uses the libSQL client
+  directly with a thin typed access wrapper.
+- Pushed the full Recall schema (7 tables: User, Fact, FactTag, AuditEntry,
+  CapabilityToken, PermissionState, Session) to Turso via the @libsql/client
+  batch API (the Prisma CLI can't push to libSQL directly). Added the
+  missing OAuth columns to the pre-existing User table via ALTER TABLE.
+- Built the GitHub OAuth Web Application Flow (lib/auth/github.ts):
+  - startOAuthFlow(): generates a CSRF state token, stores it in a 10-min
+    httpOnly cookie
+  - buildAuthorizeUrl(): constructs the github.com/login/oauth/authorize
+    URL with client_id, redirect_uri, state, scope (read:user user:email)
+  - verifyState(): constant-time-ish comparison, deletes the cookie
+  - exchangeCodeForToken(): POST to github.com/login/oauth/access_token
+  - fetchGitHubUser(): GET /api/user + /api/user/emails (for private emails)
+  - findOrCreateUser(): upsert on (oauthProvider='github', oauthSubject)
+- Built the OAuth routes:
+  - GET /api/auth/oauth/github — starts the flow, redirects to GitHub
+  - GET /api/auth/oauth/github/callback — verifies state, exchanges code,
+    fetches user, find-or-creates the User row, creates a session, redirects
+    to /app
+  - POST /api/auth/logout — destroys the session
+- Built /login page: "Connect your agent" heading, "Continue with GitHub"
+  button, demo-day note explaining GitHub OAuth is the substitute for
+  ChatGPT OAuth, security notes, and an error banner for failed flows.
+- Built /app page (session-gated): if no session, redirect to /login.
+  Otherwise renders the welcome card ("Your memory vault is ready"),
+  the empty memory canvas (with "No facts yet" empty state), the audit
+  feed stub, the realtime connection status indicator, and the user
+  header (avatar, name, sign-out).
+- Built the WebSocket mini-service (mini-services/realtime/): an
+  independent bun project with socket.io on port 3003. Emits a
+  recall:welcome event on connect so the RealtimeStatus indicator shows
+  "Live". Day 5 will wire the actual audit-event fan-out.
+- Built the RealtimeStatus client component: connects via
+  io("/?XTransformPort=3003") (per the gateway convention), shows
+  connecting/connected/disconnected states with auto-reconnect.
+- Updated lib/auth/session.ts, lib/audit/index.ts, lib/capability/index.ts,
+  lib/security/site-key.ts to use the new db.execute() API (libSQL direct
+  instead of Prisma client).
+- Updated lib/env.ts: TURSO_DATABASE_URL + TURSO_AUTH_TOKEN now required;
+  GITHUB_CLIENT_ID + GITHUB_CLIENT_SECRET now required (were optional).
+- Updated README (Turso in the stack, new getting-started with Turso +
+  GitHub OAuth prerequisites, updated project structure), .env.example
+  (TURSO_* format), and CI workflow (TURSO_* env vars for the build job).
+
+Verification (Task 2 Definition of Done):
+- ✅ `bun run lint` — 0 errors, 0 warnings
+- ✅ `bun run typecheck` — tsc --noEmit clean
+- ✅ GET /health → 200, status:"ok", database:"connected", userCount: 0
+  (queries the Turso User table)
+- ✅ GET /login → 200, renders "Connect your agent" + "Continue with GitHub"
+  button + demo-day note (verified via curl + agent-browser)
+- ✅ GET /api/auth/oauth/github → 307 redirect to
+  https://github.com/login/oauth/authorize?client_id=Ov23liPbwnZroy58NTz4
+  &redirect_uri=http://localhost:3000/api/auth/oauth/github/callback
+  &state=<csrf-token>&scope=read:user+user:email (verified via curl)
+- ✅ GET /app without session → 307 redirect to /login (verified via curl)
+- ✅ POST /api/auth/logout → {status:"ok", redirectTo:"/"}
+- ✅ GET /app WITH a valid session cookie → 200, renders the welcome card
+  ("memory vault is ready"), the user's name ("Demo User"), the empty
+  memory canvas ("No facts yet"), and the activity feed stub (verified
+  via curl with a manually-created test session)
+- ✅ User creation + session creation + session-join query work end-to-end
+  against Turso (verified with a direct libSQL test script)
+- ✅ Realtime mini-service starts on port 3003 and responds to HTTP health
+  checks (verified via curl)
+- ✅ RealtimeStatus component renders on /app (connecting/connected states)
+- ✅ agent-browser on /login: 0 console errors, 0 page errors
+
+Stage Summary:
+- Task 2 is complete. A new user can sign in via GitHub OAuth, Recall
+  creates/finds their User row in Turso, issues a session, and redirects
+  to /app where they see the empty memory canvas with a welcome card.
+  The WebSocket mini-service connects on /app (RealtimeStatus indicator).
+- Database note: Prisma's Rust query engine can't handle libsql:// URLs
+  (URL_INVALID error), so Recall uses the @libsql/client directly with a
+  thin typed wrapper. The Prisma schema is retained as the source of truth
+  for the data model and for DDL generation. This is the standard Turso +
+  Next.js serverless pattern.
+- Keys confirmed sufficient for the entire project: GitHub token (repo),
+  Vercel token (deploy), Turso token + URL (database), GitHub OAuth
+  Client ID + Secret (auth). No additional keys required for any remaining
+  task — Recall runs zero LLMs of its own.
+- Awaiting the user's go-ahead to begin Task 3 (Memory canvas + CRUD).
