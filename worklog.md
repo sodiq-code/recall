@@ -880,3 +880,51 @@ Stage Summary:
   aligned with the blueprint. The only fix needed was the declarative form
   annotation tags field, which is now resolved. The codebase is ready for
   Task 8 (Demo recording + polish pass 1).
+
+---
+Task ID: deploy
+Agent: Z.ai Code (orchestrator)
+Task: UI polish for production + deploy to Vercel
+
+Work Log:
+- Audited all UI surfaces for placeholder text, flash phrases, and
+  hackathon references that would make the app look unfinished.
+- Found and fixed 3 user-visible issues:
+  1. /login page: "Demo-day note: GitHub OAuth stands in for ChatGPT OAuth
+     (third-party ChatGPT OAuth is not yet GA)" → reworded to "About
+     authentication: Recall uses GitHub OAuth for sign-in. Direct ChatGPT
+     OAuth for third-party apps is on the roadmap"
+  2. /api/memory/summarize response: ranking field contained "blueprint
+     §23.3" → cleaned to "relevanceScore (frequency-based)"
+  3. /not-found (404) page: "This route is part of the Recall build-out and
+     ships on a later day" → reworded to "The page you're looking for doesn't
+     exist or may have moved"
+- Verified: no flash phrases remain in any user-visible text across /,
+  /login, /app, /app/settings, or the API responses.
+- Deployed to Vercel production:
+  - URL: https://my-project-alpha-puce-76.vercel.app
+  - /health → 200, status: ok, database: connected
+  - /api → 200, 6 tools
+  - /login → 200
+  - /app (no session) → 307 redirect to /login
+  - /api/auth/oauth/github → 307 redirect to GitHub with correct
+    redirect_uri=https://my-project-alpha-puce-76.vercel.app/api/auth/oauth/github/callback
+- Set all environment variables on Vercel: TURSO_DATABASE_URL,
+  TURSO_AUTH_TOKEN, DATABASE_URL, DIRECT_DATABASE_URL, SESSION_SECRET,
+  GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, NEXT_PUBLIC_SITE_URL,
+  NEXT_PUBLIC_SITE_NAME, REALTIME_SECRET, REALTIME_PORT.
+
+Verification:
+- ✅ `bun run lint` — 0 errors, 0 warnings
+- ✅ `bun run typecheck` — clean
+- ✅ Production deployment: https://my-project-alpha-puce-76.vercel.app
+- ✅ Health endpoint: database connected
+- ✅ No flash phrases in user-visible text
+- ✅ OAuth redirect uses the correct production callback URL
+
+Manual step required (user):
+- Add https://my-project-alpha-puce-76.vercel.app/api/auth/oauth/github/callback
+  as a redirect URI in the GitHub OAuth app settings at
+  https://github.com/settings/developers (the app currently only has the
+  localhost callback). This is a one-click step — the user just adds the
+  production URL as a second redirect URI.
