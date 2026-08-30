@@ -112,7 +112,21 @@ export function AddFactForm() {
         isExpanded ? "border-primary/40 ring-1 ring-primary/20" : "border-border/60",
       )}
     >
-      <form onSubmit={handleSubmit} className="p-4">
+      <form
+        onSubmit={handleSubmit}
+        className="p-4"
+        // Declarative WebMCP form annotation (blueprint §32, Day 7):
+        // The mcp-tool attribute tells a WebMCP-capable browser that this form
+        // is ALSO a WebMCP tool. The browser synthesizes a JSON Schema from the
+        // form's named fields, so the add-fact form is both an HTML form (for
+        // the user) and a WebMCP tool (for the agent) — one code path, two
+        // consumers. The imperative registration in lib/webmcp handles the
+        // live tool calls; this declarative annotation is the spec-compliant
+        // fallback that works even without imperative registration.
+        data-mcp-tool="addFact"
+        data-mcp-description="Add a new fact to the user's memory vault."
+        data-mcp-untrusted="true"
+      >
         <Textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
@@ -124,6 +138,9 @@ export function AddFactForm() {
           )}
           maxLength={LIMITS.FACT_MAX_LENGTH}
           aria-label="Fact content"
+          name="content"
+          data-mcp-required="true"
+          data-mcp-maxlength={LIMITS.FACT_MAX_LENGTH}
         />
         {isExpanded && (
           <div className="mt-3 space-y-3 border-t border-border/40 pt-3">
@@ -135,6 +152,9 @@ export function AddFactForm() {
                 placeholder="tags (comma-separated, optional)"
                 className="h-8 border-0 bg-background/70 px-2 text-xs shadow-none"
                 aria-label="Fact tags"
+                name="tags"
+                data-mcp-type="array"
+                data-mcp-maxitems={LIMITS.TAG_MAX_PER_FACT}
               />
             </div>
             <div className="flex items-center justify-between">

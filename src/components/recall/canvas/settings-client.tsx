@@ -16,6 +16,8 @@ import {
   Key,
   Globe,
   Check,
+  Download,
+  ScrollText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -406,6 +408,125 @@ export function SettingsClient() {
           </div>
         )}
       </div>
+
+      {/* Audit export */}
+      <AuditExportSection />
+    </div>
+  );
+}
+
+/** Audit export section — download the signed audit log. */
+function AuditExportSection() {
+  const [isExporting, setIsExporting] = React.useState(false);
+  const [exportInfo, setExportInfo] = React.useState<{
+    count: number;
+    exportedAt: string;
+  } | null>(null);
+
+  async function handleExport() {
+    setIsExporting(true);
+    try {
+      const res = await fetch("/api/audit/export");
+      if (!res.ok) throw new Error("Failed to export audit log");
+      const data = await res.json();
+
+      // Decode the payload to show the entry count.
+      // atob decodes base64; we convert base64url → base64 first.
+      const b64 = data.payload.replace(/-/g, "+").replace(/_/g, "/");
+      const payload = JSON.parse(
+        decodeURIComponent(
+          atob(b64)
+            .split("")
+            .map((c: string) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+            .join(""),
+        ),
+      ) as { count: number; exportedAt: string };
+
+      // Download the full signed export as a JSON file.
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `recall-audit-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      setExportInfo({
+        count: payload.count,
+        exportedAt: payload.exportedAt,
+      });
+      toast.success("Audit log exported", {
+        description: `${payload.count} entries · signed with your site key`,
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Export failed");
+    } finally {
+      setIsExporting(false);
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-border/60 bg-card/40 p-6">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="flex items-center gap-2 text-sm font-medium uppercase tracking-wide text-muted-foreground">
+          <ScrollText className="h-4 w-4 text-primary" />
+          Audit log export
+        </h2>
+      </div>
+
+      <p className="mb-4 text-xs text-muted-foreground">
+        Export your full audit log as a signed JSON bundle. The bundle is
+        signed with your WebCrypto site key (ECDSA P-256) and includes the
+        public key — so you (or a judge) can verify it hasn&apos;t been
+        tampered with, independent of the database.
+      </p>
+
+      <Button
+        size="sm"
+        onClick={handleExport}
+        disabled={isExporting}
+      >
+        {isExporting ? (
+          <>
+            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            Exporting…
+          </>
+        ) : (
+          <>
+            <Download className="mr-1.5 h-3.5 w-3.5" />
+            Export signed audit log
+          </>
+        )}
+      </Button>
+
+      {exportInfo && (
+        <div className="mt-4 rounded-lg border border-primary/30 bg-primary/[0.04] p-4">
+          <div className="mb-2 flex items-center gap-1.5">
+            <Check className="h-3.5 w-3.5 text-primary" />
+            <span className="text-xs font-medium text-primary">
+              Export complete
+            </span>
+          </div>
+          <div className="space-y-1 text-xs">
+            <div className="flex gap-2">
+              <span className="w-16 shrink-0 text-muted-foreground">Entries</span>
+              <span className="text-foreground">{exportInfo.count}</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="w-16 shrink-0 text-muted-foreground">Exported</span>
+              <span className="text-foreground">
+                {new Date(exportInfo.exportedAt).toLocaleString()}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <span className="w-16 shrink-0 text-muted-foreground">Format</span>
+              <code className="font-mono text-foreground">JWS (JSON Web Signature)</code>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -747,3 +747,82 @@ Stage Summary:
   user just re-issues.
 - Awaiting the user's go-ahead to begin Task 7 (Audit export + declarative
   form annotation + README).
+
+---
+Task ID: 7
+Agent: Z.ai Code (orchestrator)
+Task: Audit export + declarative form annotation + README (blueprint §32, Day 7)
+
+Work Log:
+- Built the signed audit export (lib/audit/index.ts):
+  - exportAuditLog() fetches ALL audit entries (capped at 10,000) and signs
+    the bundle with the user's site key (WebCrypto ECDSA P-256) via
+    signWithSiteKey()
+  - Returns a SignedAuditExport with: payload (base64url-encoded JSON bundle),
+    signature (detached JWS, base64url), publicKeyJwk (the user's public key
+    so the signature can be verified externally — private key d is stripped),
+    and alg ("ECDSA")
+  - The bundle includes: exportedAt, userId, entries[], count
+- Built GET /api/audit/export route — returns the SignedAuditExport as JSON
+  with a Content-Disposition header suggesting a download filename.
+- Added declarative form annotation to the add-fact form
+  (components/recall/canvas/add-fact-form.tsx):
+  - data-mcp-tool="addFact" — tells a WebMCP-capable browser this form is
+    ALSO a WebMCP tool (the browser synthesizes a JSON Schema from the form's
+    named fields)
+  - data-mcp-description="Add a new fact to the user's memory vault."
+  - data-mcp-untrusted="true" (the untrustedContentHint annotation)
+  - name="content" on the textarea + data-mcp-required + data-mcp-maxlength
+  - name="tags" on the tag input + data-mcp-type="array" + data-mcp-maxitems
+  - The form is now both an HTML form (for the user) and a WebMCP tool (for
+    the agent) — one code path, two consumers
+- Added the AuditExportSection component to /app/settings:
+  - "Export signed audit log" button that calls /api/audit/export
+  - Downloads the full JWS bundle as a JSON file
+  - Shows the entry count + export timestamp + format after export
+  - Browser-compatible base64url decoding (no Node.js Buffer in client)
+- Rewrote README.md with:
+  - The inversion framing (table comparing prior MCP apps vs Recall)
+  - Updated architecture diagram (includes the realtime mini-service)
+  - Full sponsor stack (Turso, socket.io, TanStack Query added)
+  - Updated getting-started (Turso + GitHub OAuth prerequisites)
+  - Updated project structure (all new routes/lib modules documented)
+  - WebMCP Challenge section noting 9 WebMCP features exercised (added
+    capability tokens + declarative form annotation to the count)
+  - Execution criterion boosted: lists the full product experience
+
+Verification (Task 7 Definition of Done):
+- ✅ `bun run lint` — 0 errors, 0 warnings
+- ✅ `bun run typecheck` — tsc --noEmit clean
+- ✅ GET /api/audit/export → returns signed JWS bundle:
+  - alg: ECDSA
+  - signature: 86 chars (base64url)
+  - publicKeyJwk: EC P-256 with x, y (NO private key d — stripped)
+  - payload: 3 entries (2 addFact + 1 query) with correct toolName +
+    callerOrigin
+- ✅ /app/settings renders "AUDIT LOG EXPORT" section with "Export signed
+  audit log" button (browser verified, 0 errors)
+- ✅ /app has declarative form annotation: data-mcp-tool="addFact",
+  data-mcp-description, data-mcp-untrusted, data-mcp-required,
+  data-mcp-maxlength (verified via curl)
+- ✅ The add-fact form is both an HTML form (for the user) and a WebMCP tool
+  (for the agent) — the declarative annotation lets a WebMCP-capable browser
+  synthesize a JSON Schema from the form fields
+
+Stage Summary:
+- Task 7 is complete. The user can export their full audit log as a signed
+  JWS bundle from /app/settings — the bundle includes the public key so it
+  can be verified externally without trusting the database. The add-fact form
+  now carries declarative WebMCP annotation (data-mcp-tool attribute) so
+  it's both an HTML form and a WebMCP tool. The README is comprehensive with
+  the architecture diagram, the full sponsor stack, getting-started, and the
+  9 WebMCP features exercised.
+- Blueprint validation (§33.1):
+  - "declarative form annotation spec complexity" → MITIGATED: the
+    data-mcp-* attributes follow the spec's "synthesize a declarative JSON
+    Schema object" algorithm; the form fields have name attributes + type
+    hints so the browser can synthesize the schema
+  - "skip declarative form annotation; only imperative tool registration"
+    → NOT SKIPPED: both imperative (lib/webmcp) and declarative (data-mcp-*)
+    are implemented, so Recall exercises 9 WebMCP features (up from 7)
+- Awaiting the user's go-ahead to begin Task 8 (Demo recording + polish pass 1).

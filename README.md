@@ -74,10 +74,10 @@ annotations so the agent knows how it may use it.
    JSON bundle.
 
 > **Try it without ChatGPT.** The interactive
-> [Tool Playground](#try-the-tools) (`/playground`) lets you call each of
-> the six tools against an in-memory demo vault — the same response shape
-> ChatGPT would receive, with the same audit-trail provenance. No sign-in
-> required.
+> [Tool Playground](https://recall.app/playground) (`/playground`) lets you
+> call each of the six tools against an in-memory demo vault — the same
+> response shape ChatGPT would receive, with the same audit-trail provenance.
+> No sign-in required.
 
 ## Architecture
 
@@ -97,12 +97,19 @@ annotations so the agent knows how it may use it.
 └───────────────────────────┬─────────────────────────────────────┘
                             │ authenticated fetch / WebSocket
 ┌───────────────────────────▼─────────────────────────────────────┐
-│ Recall backend (Next.js API routes → Prisma)                   │
+│ Recall backend (Next.js API routes → Turso)                    │
 │  • /api/memory/*        — CRUD + query/summarize handlers       │
 │  • /api/audit/*        — audit feed + signed export            │
 │  • /api/capability-token — issue + verify short-TTL tokens     │
 │  • /api/permissions     — per-tool enable + granted origins     │
 │  • /api/realtime       — WebSocket fan-out to open tabs         │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ Realtime mini-service (mini-services/realtime/, port 3003)     │
+│  • socket.io with per-user rooms                                 │
+│  • HTTP /emit endpoint (backend fan-in)                         │
+│  • Broadcasts audit events to all open Recall tabs               │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -110,10 +117,8 @@ annotations so the agent knows how it may use it.
 > Cloudflare Workers + Durable Objects for per-user stateful edge storage.
 > This repository ships the sanctioned Vercel-only fallback (validated in
 > the blueprint's validation plan: *"Use only Vercel; switch Durable Objects
-> to Vercel Postgres"*). State lives in Prisma (SQLite for dev, Vercel
-> Postgres for production) and the WebSocket fan-out runs as a dedicated
-> mini-service. The Cloudflare deployment path remains available; the
-> `wrangler.toml` scaffold is documented for a later task.
+> to Vercel Postgres"*). State lives in Turso (libSQL); the WebSocket fan-out
+> runs as a dedicated mini-service.
 
 ## The stack
 
@@ -124,11 +129,31 @@ annotations so the agent knows how it may use it.
 - **[socket.io](https://socket.io/)** — real-time WebSocket fan-out (mini-service)
 - **[GitHub OAuth](https://docs.github.com/en/apps/oauth-building-authentication-apps)** — demo-day substitute for ChatGPT OAuth
 - **[WebCrypto](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API)** — capability tokens + signed audit log
+- **[TanStack Query](https://tanstack.com/query/latest)** — client-side data fetching with optimistic updates
 - **[GitHub Actions](https://github.com/features/actions)** — lint · typecheck · build on every PR
 
 No blockchain, no Kubernetes, no multi-agent orchestration, no RAG pipeline
 in the MVP. Each choice is justified by the product; each rejected
 alternative is documented in the source.
+
+## The security model
+
+Recall's defense is **structural**, not just code. The trust model is anchored
+to the WebMCP spec topology: a website publishes its own state as a tool
+surface, and an external agent client (ChatGPT) is granted browser-mediated,
+origin-scoped, capability-token-authenticated, audit-logged access to read and
+write that state.
+
+| Boundary | What it enforces |
+| --- | --- |
+| **TLS origin** | Tools are published only from `recall.app` (or its preview). An attacker cannot impersonate the origin without the private key. |
+| **Browser sandbox** | Tool handlers execute in the page's existing sandbox. There is no out-of-band channel to the backend. |
+| **`fromOrigins` grant** | Tools are exposed only to the agent origins the user grants (default: `https://chatgpt.com`). |
+| **Capability token** | Every tool call presents a short-TTL (60–300s), audience-restricted, scope-limited token signed with the user's site key. |
+| **Per-tool permissions** | The user can disable any of the six tools. The WebMCP bridge only registers enabled tools; capability tokens are scoped to the enabled set. |
+| **Audit log** | Every call is appended to an immutable, signed log. The user can export and verify it independently of the database. |
+
+See [`SECURITY.md`](./SECURITY.md) for the full threat model.
 
 ## Getting started
 
@@ -160,17 +185,17 @@ You need:
 
 ### Database
 
-The schema is pushed to Turso via the `@libsql/client` (the Prisma CLI can't
-push directly to libSQL). The schema is defined in `prisma/schema.prisma` as
-the source of truth; the DDL is applied with:
+The schema is defined in `prisma/schema.prisma` as the source of truth. Push
+it to your local migration DB and to Turso:
 
 ```bash
 bun run db:push     # push the schema to the local migration DB (Prisma CLI)
 bun run db:generate # regenerate the Prisma client (for types)
 ```
 
-To push the schema to Turso, run the DDL via the libSQL client (see the
-task-2 worklog entry for the exact command).
+To push the schema to Turso, use the `@libsql/client` to apply the DDL (the
+Prisma CLI can't push directly to libSQL — see the task-2 worklog entry for
+the exact command).
 
 ### Develop
 
@@ -179,9 +204,15 @@ bun run dev                                        # main app on :3000
 cd mini-services/realtime && bun run dev           # realtime on :3003
 ```
 
-Visit [`/health`](http://localhost:3000/health) for the health check,
-[`/login`](http://localhost:3000/login) to sign in via GitHub OAuth, and
-[`/app`](http://localhost:3000/app) for the memory canvas (requires a session).
+Visit:
+- [`/`](http://localhost:3000/) — landing page + tool playground
+- [`/login`](http://localhost:3000/login) — sign in via GitHub OAuth
+- [`/app`](http://localhost:3000/app) — memory canvas + activity feed (requires session)
+- [`/app/settings`](http://localhost:3000/app/settings) — permissions + tokens + audit export
+- [`/playground`](http://localhost:3000/playground) — interactive WebMCP tool playground
+- [`/docs`](http://localhost:3000/docs) — one-page developer doc
+- [`/health`](http://localhost:3000/health) — health check
+- [`/api`](http://localhost:3000/api) — self-describing API manifest
 
 ### Scripts
 
@@ -200,32 +231,36 @@ Visit [`/health`](http://localhost:3000/health) for the health check,
 src/
   app/
     api/                 # HTTP + WebMCP tool-handler API routes
-      memory/            #   memory CRUD + query/summarize (next tasks)
-      audit/             #   audit feed + signed export (next tasks)
-      capability-token/  #   capability token issue/verify (next tasks)
-      permissions/        #   per-tool enable + granted origins (next tasks)
+      memory/            #   memory CRUD + query/summarize/tags/restore
+      audit/             #   audit feed + signed JWS export
+      capability-token/  #   capability token issue/verify
+      permissions/        #   per-tool enable + granted origins
       auth/oauth/github/ #   GitHub OAuth flow (start + callback)
       auth/logout/       #   session destruction
       route.ts           #   self-describing API manifest
     health/route.ts      # /health — health check
     login/               # /login — GitHub OAuth sign-in
-    app/                 # /app — memory canvas (session-gated)
+    app/                 # /app — memory canvas + activity feed (session-gated)
+    app/settings/        # /app/settings — permissions + tokens + audit export
     playground/          # /playground — interactive WebMCP tool playground
     docs/                # /docs — one-page developer doc
     page.tsx             # / — landing page (incl. inline tool playground)
-    layout.tsx           # root layout (theme provider, metadata)
+    layout.tsx           # root layout (theme provider, query provider, metadata)
     not-found.tsx        # branded 404
   components/
-    recall/              # Recall-specific components (header, footer, landing)
+    recall/              # Recall-specific components (header, footer, landing, canvas)
     theme/               # next-themes provider + toggle
     ui/                  # shadcn/ui primitives
   lib/
-    webmcp/              # WebMCP tool definitions + registration entrypoint
+    webmcp/              # WebMCP tool definitions + handlers + registration
     demo/                # in-memory demo vault + simulated tool executor
-    auth/                # GitHub OAuth + session helpers
-    audit/               # audit-log append/list (next tasks)
-    capability/          # capability token issue/verify (next tasks)
-    security/            # site signing key — WebCrypto (next tasks)
+    auth/                # GitHub OAuth + session + API auth helpers
+    audit/               # audit-log append/list + signed JWS export
+    capability/          # capability token issue/verify (WebCrypto-signed)
+    permissions/         # per-tool enable + granted origins
+    security/            # site signing key — WebCrypto ECDSA P-256
+    realtime/            # notify helper (backend → mini-service fan-in)
+    memory/              # memory data-access layer (CRUD + query + summarize)
     constants.ts        # tool names, origins, validation bounds
     env.ts               # typed environment access (zod-validated)
     db.ts                # Turso (libSQL) database access layer
@@ -238,16 +273,6 @@ mini-services/
   ci.yml                 # lint + typecheck + build on every push/PR
 ```
 
-## The security model
-
-Recall's defense is structural, not just code. To match it, a competitor would
-need to (a) publish tools from their own TLS origin, (b) issue capability
-tokens with the right audience/TTL/scope, (c) implement a cryptographically
-signed audit log, and (d) ship the open-source template that makes the pattern
-reusable. Each is real work; together they are the bulk of the build window.
-
-See [`SECURITY.md`](./SECURITY.md) for the full threat model.
-
 ## The WebMCP Challenge
 
 - **Challenge:** [The WebMCP Challenge](https://webmcp.devpost.com/)
@@ -258,16 +283,23 @@ See [`SECURITY.md`](./SECURITY.md) for the full threat model.
 
 ### What this project demonstrates
 
-- **WebMCP Leverage** — exercises seven distinct WebMCP features in 30 lines
-  of registration code: imperative tool registration, the six-tool surface,
-  `readOnlyHint`, `untrustedContentHint`, `fromOrigins` cross-origin grant,
-  browser-mediated session, and audit-log integration. The interactive
-  `/playground` lets judges explore the full tool surface hands-on without
-  ChatGPT or a sign-in.
+- **WebMCP Leverage** — exercises nine distinct WebMCP features: imperative
+  tool registration (`document.modelContext.registerTool()`), the six-tool
+  surface, `readOnlyHint`, `untrustedContentHint`, `fromOrigins` cross-origin
+  grant (via the `Permissions-Policy: tools=(https://chatgpt.com)` header),
+  browser-mediated session, audit-log integration, capability-token
+  authentication, and declarative form annotation (the add-fact form is both
+  an HTML form and a WebMCP tool via the `data-mcp-tool` attribute). The
+  interactive `/playground` lets judges explore the full tool surface
+  hands-on without ChatGPT or a sign-in.
 - **Execution** — a complete, coherent product experience, not a technical
-  proof of concept.
+  proof of concept: sign-up, memory canvas with CRUD + search + tags,
+  real-time activity feed with WebSocket fan-out, per-tool permissions,
+  capability tokens, signed audit export, and a settings page — all in one
+  repo.
 - **Potential Impact** — every ChatGPT Plus/Pro/Team user (~100M+ MAU) is a
-  target user; opaque AI memory is a 2026 trust crisis.
+  target user; opaque AI memory is a 2026 trust crisis (EU AI Act Article 22
+  requires auditability).
 - **Creativity & Ambition** — the architectural inversion (website as
   subject, agent as client) is a category anchor competitors are unlikely to
   replicate in the build window.

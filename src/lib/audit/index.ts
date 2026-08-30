@@ -141,3 +141,92 @@ export interface AuditEntryView {
   capabilityTokenId: string | null;
   signature: string;
 }
+
+// ---------------------------------------------------------------------------
+// Export — signed JWS bundle (Day 7)
+// ---------------------------------------------------------------------------
+
+import { signWithSiteKey } from "@/lib/security/site-key";
+
+export interface AuditExportBundle {
+  /** ISO timestamp of the export. */
+  exportedAt: string;
+  /** The user's id (so the bundle is self-identifying). */
+  userId: string;
+  /** All audit entries, newest first. */
+  entries: AuditEntryView[];
+  /** Entry count (convenience for verifiers). */
+  count: number;
+}
+
+export interface SignedAuditExport {
+  /** The JWS payload (the audit export bundle, base64url-encoded). */
+  payload: string;
+  /** The detached JWS signature (base64url, ECDSA P-256 + SHA-256). */
+  signature: string;
+  /** The user's public key as a JWK, so the signature can be verified
+   *  independently of the database. */
+  publicKeyJwk: JsonWebKey | null;
+  /** The signing algorithm. */
+  alg: string;
+}
+
+/**
+ * Export the user's full audit log as a signed JWS bundle.
+ *
+ * Blueprint §32 (Day 7): "user exports audit log; verifies JWS signature
+ * with site's public key." The bundle is the payload; the signature is the
+ * detached JWS so a judge (or the user, or an external auditor) can verify
+ * the bundle hasn't been tampered with — independent of the database.
+ */
+export async function exportAuditLog(
+  userId: string,
+): Promise<SignedAuditExport> {
+  // Fetch ALL entries (capped at 10,000 for practicality).
+  const entries = await listAuditEntries(userId, 10000);
+
+  const bundle: AuditExportBundle = {
+    exportedAt: new Date().toISOString(),
+    userId,
+    entries,
+    count: entries.length,
+  };
+
+  const payloadJson = JSON.stringify(bundle);
+  const signature = await signWithSiteKey(userId, bundle);
+
+  // Fetch the public key JWK so the signature can be verified externally.
+  const publicKeyJwk = await getPublicKeyJwk(userId);
+
+  return {
+    payload: Buffer.from(payloadJson, "utf-8").toString("base64url"),
+    signature,
+    publicKeyJwk,
+    alg: "ECDSA",
+  };
+}
+
+/**
+ * Fetch the user's public key as a JWK (for external signature verification).
+ * Returns null if the user hasn't generated a site key yet.
+ */
+async function getPublicKeyJwk(
+  userId: string,
+): Promise<JsonWebKey | null> {
+  const result = await db.execute({
+    sql: `SELECT siteKeyJwk FROM "User" WHERE id = ?`,
+    args: [userId],
+  });
+  const row = result.rows[0] as unknown as { siteKeyJwk: string | null } | undefined;
+  if (!row?.siteKeyJwk) return null;
+
+  const jwk = JSON.parse(row.siteKeyJwk) as JsonWebKey;
+  // Return only the public components (strip private key ops).
+  return {
+    ...jwk,
+    key_ops: ["verify"],
+    // Ensure d (private exponent) is not included.
+    d: undefined,
+  };
+}
+
