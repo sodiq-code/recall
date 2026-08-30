@@ -1,0 +1,219 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/*
+ * Recall palette — emerald primary (memory, trust) on warm-neutral stone,
+ * with an amber accent reserved for live "agent activity" highlights. We
+ * deliberately avoid indigo/blue (per project styling rules) and keep the
+ * surface warm so the audit-feed glow reads as an event, not chrome.
+ */
+:root {
+  --radius: 0.75rem;
+  --background: oklch(0.99 0.004 95);
+  --foreground: oklch(0.18 0.01 160);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.01 160);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.01 160);
+  /* Emerald-700 family — trustworthy, "kept" memory */
+  --primary: oklch(0.55 0.13 165);
+  --primary-foreground: oklch(0.99 0.01 95);
+  --secondary: oklch(0.96 0.01 95);
+  --secondary-foreground: oklch(0.25 0.02 160);
+  --muted: oklch(0.96 0.008 95);
+  --muted-foreground: oklch(0.5 0.01 160);
+  /* Amber accent — reserved for agent-activity / audit events */
+  --accent: oklch(0.82 0.13 75);
+  --accent-foreground: oklch(0.25 0.05 75);
+  --destructive: oklch(0.58 0.22 25);
+  --border: oklch(0.9 0.008 95);
+  --input: oklch(0.92 0.006 95);
+  --ring: oklch(0.55 0.13 165);
+  --chart-1: oklch(0.55 0.13 165);
+  --chart-2: oklch(0.7 0.15 75);
+  --chart-3: oklch(0.6 0.1 200);
+  --chart-4: oklch(0.65 0.18 145);
+  --chart-5: oklch(0.55 0.2 30);
+  --sidebar: oklch(0.985 0.004 95);
+  --sidebar-foreground: oklch(0.18 0.01 160);
+  --sidebar-primary: oklch(0.55 0.13 165);
+  --sidebar-primary-foreground: oklch(0.99 0.01 95);
+  --sidebar-accent: oklch(0.96 0.01 95);
+  --sidebar-accent-foreground: oklch(0.25 0.02 160);
+  --sidebar-border: oklch(0.9 0.008 95);
+  --sidebar-ring: oklch(0.55 0.13 165);
+}
+
+.dark {
+  /* Deep charcoal with a faint emerald undertone — the audit feed glows. */
+  --background: oklch(0.16 0.012 165);
+  --foreground: oklch(0.97 0.005 95);
+  --card: oklch(0.205 0.014 165);
+  --card-foreground: oklch(0.97 0.005 95);
+  --popover: oklch(0.205 0.014 165);
+  --popover-foreground: oklch(0.97 0.005 95);
+  --primary: oklch(0.72 0.15 165);
+  --primary-foreground: oklch(0.16 0.02 165);
+  --secondary: oklch(0.27 0.015 165);
+  --secondary-foreground: oklch(0.97 0.005 95);
+  --muted: oklch(0.24 0.012 165);
+  --muted-foreground: oklch(0.7 0.01 160);
+  --accent: oklch(0.8 0.14 75);
+  --accent-foreground: oklch(0.2 0.04 75);
+  --destructive: oklch(0.68 0.2 25);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.72 0.15 165);
+  --chart-1: oklch(0.72 0.15 165);
+  --chart-2: oklch(0.8 0.14 75);
+  --chart-3: oklch(0.7 0.12 200);
+  --chart-4: oklch(0.72 0.16 145);
+  --chart-5: oklch(0.7 0.2 30);
+  --sidebar: oklch(0.205 0.014 165);
+  --sidebar-foreground: oklch(0.97 0.005 95);
+  --sidebar-primary: oklch(0.72 0.15 165);
+  --sidebar-primary-foreground: oklch(0.16 0.02 165);
+  --sidebar-accent: oklch(0.27 0.015 165);
+  --sidebar-accent-foreground: oklch(0.97 0.005 95);
+  --sidebar-border: oklch(1 0 0 / 9%);
+  --sidebar-ring: oklch(0.72 0.15 165);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "ss01", "cv01", "cv11";
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Subtle dotted grid behind the hero — reads as "memory lattice". */
+  .bg-memory-lattice {
+    background-image: radial-gradient(
+      circle at 1px 1px,
+      color-mix(in oklch, var(--foreground) 12%, transparent) 1px,
+      transparent 0
+    );
+    background-size: 22px 22px;
+  }
+  /*
+   * Amber glow used on live audit-feed entries. The entry pulses subtly so it
+   * reads as an active event, not static chrome. The pulse is gentle (8% box
+   * shadow delta) and slow (2.4s) so it never distracts from the surrounding
+   * content. Reduced-motion users see the static baseline state (handled by
+   * the prefers-reduced-motion block at the bottom of this file).
+   *
+   * The companion @keyframes recall-glow-pulse is declared OUTSIDE this
+   * @layer base block (at the root of the stylesheet) so it is hoisted
+   * regardless of how Tailwind v4 reorders layer contents.
+   */
+  .glow-activity {
+    box-shadow:
+      0 0 0 1px color-mix(in oklch, var(--accent) 60%, transparent),
+      0 0 22px -6px color-mix(in oklch, var(--accent) 70%, transparent);
+    animation: recall-glow-pulse 2.4s ease-in-out infinite;
+  }
+  /*
+   * Gradient hairline ring used to elevate the hero / audit-feed card. Uses
+   * the existing primary + accent tokens so it stays inside the palette
+   * system (no indigo/blue) and adapts to light/dark automatically.
+   */
+  .ring-elevated {
+    box-shadow:
+      0 0 0 1px color-mix(in oklch, var(--primary) 16%, transparent),
+      0 24px 60px -28px color-mix(in oklch, var(--primary) 35%, transparent);
+  }
+  /*
+   * A subtle text-balance helper for headlines so long titles wrap evenly
+   * across the responsive breakpoints. optically nicer than text-pretty for
+   * large display sizes.
+   */
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/*
+ * @keyframes for the live-entry amber pulse. Declared at the root of the
+ * stylesheet (outside @layer base) so the animation-name resolves regardless
+ * of how Tailwind v4 orders the cascading layers.
+ */
+@keyframes recall-glow-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px color-mix(in oklch, var(--accent) 55%, transparent),
+      0 0 16px -8px color-mix(in oklch, var(--accent) 55%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px color-mix(in oklch, var(--accent) 80%, transparent),
+      0 0 34px -4px color-mix(in oklch, var(--accent) 95%, transparent);
+  }
+}
+
+/*
+ * Accessibility: when the user requests reduced motion, collapse every
+ * CSS-driven animation and transition to a near-zero duration. Framer Motion's
+ * JS animations are handled separately in motion-primitives.tsx via the
+ * useReducedMotion() hook, but anything driven purely by CSS (animate-ping,
+ * glow-activity pulse, hover transforms) is gated here so the page is fully
+ * static for those users.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .glow-activity {
+    animation: none !important;
+  }
+}

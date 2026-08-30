@@ -1,0 +1,165 @@
+// Recall — Prisma schema
+// Data model per Section 24.1 of the WebMCP Grand Prize Blueprint.
+//
+// Note on storage: SQLite (the dev database) does not support native arrays
+// or Set types, so list/set fields (tags, scope, enabledTools, grantedOrigins)
+// are stored as JSON strings and (de)serialized in the data-access layer.
+// The production target (Vercel Postgres) restores native array columns; the
+// JSON envelope is kept intentionally so the access layer is portable.
+//
+// Entities (per blueprint §24.1):
+//   - User            one per OAuth subject
+//   - Fact            one per user fact (soft-deletable)
+//   - FactTag         normalized tag rows (a fact's tags)
+//   - AuditEntry      one per agent action (append-only, signed)
+//   - CapabilityToken one per agent session (short-TTL, audience-scoped)
+//   - PermissionState one per user (per-tool enable + granted origins)
+//   - Session         server-side session store (auth, demo-day cookie sessions)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  // OAuth provider: "github" for demo (demo-day substitute for ChatGPT OAuth),
+  // "chatgpt" once third-party ChatGPT OAuth is GA, "google" reserved.
+  oauthProvider String
+  // The OAuth provider's stable subject identifier.
+  oauthSubject  String
+  email         String
+  name          String?
+  avatarUrl     String?
+  // JWK (JSON Web Key) representation of this user's site signing key, used to
+  // sign audit entries and capability tokens. Generated via WebCrypto on first
+  // sign-in. Stored — never derived client-side.
+  siteKeyJwk    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  facts            Fact[]
+  auditEntries     AuditEntry[]
+  capabilityTokens CapabilityToken[]
+  permissionState  PermissionState?
+  sessions         Session[]
+
+  @@unique([oauthProvider, oauthSubject])
+  @@index([email])
+}
+
+model Fact {
+  id        String    @id @default(cuid())
+  userId    String
+  // The fact text. Max 500 chars (validated in the access layer).
+  content   String
+  // "user" (typed in Recall) or "agent" (added via the addFact WebMCP tool).
+  source    String
+  // Origin that created the fact: "recall.app" or a granted agent origin
+  // (e.g. "chatgpt.com"). Provenance anchor for the audit trail.
+  sourceOrigin       String
+  capabilityTokenId  String?
+  // Frequency-based relevance score (blueprint §23.3). Incremented on query
+  // hits, decremented on rollback. Never derived by an LLM.
+  relevanceScore     Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  // Soft delete ("forget"). Audit log retains integrity via result hashes.
+  deletedAt          DateTime?
+
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tags FactTag[]
+
+  @@index([userId, deletedAt])
+  @@index([userId, updatedAt])
+}
+
+model FactTag {
+  id     String @id @default(cuid())
+  factId String
+  // Lowercase, alphanumeric + hyphen, 1-30 chars (validated in access layer).
+  tag    String
+
+  fact Fact @relation(fields: [factId], references: [id], onDelete: Cascade)
+
+  @@unique([factId, tag])
+  @@index([tag])
+}
+
+model AuditEntry {
+  id      String   @id @default(cuid())
+  userId  String
+  // Epoch millis at the time of the call.
+  timestamp    DateTime @default(now())
+  // The origin that invoked the tool: "chatgpt.com" or a granted fromOrigins.
+  callerOrigin String
+  // One of: query | addFact | updateFact | forgetFact | summarize | timeline.
+  toolName     String
+  // Sanitized call args (private content stripped) — JSON string.
+  argsJson     String
+  // Compact result summary — count + SHA-256 of full result, for verification.
+  resultCount  Int
+  resultHash   String
+  // The capability token that authorized this call.
+  capabilityTokenId String?
+  // Detached JWS signature (site key) — makes the entry cryptographically
+  // verifiable independent of the database.
+  signature   String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, timestamp])
+  @@index([userId, toolName])
+}
+
+model CapabilityToken {
+  id        String    @id @default(cuid())
+  userId    String
+  // Audience this token is scoped to (e.g. "https://chatgpt.com").
+  audience  String
+  // JSON array of granted tool names (subset of the six tools).
+  scopeJson String
+  issuedAt  DateTime  @default(now())
+  // Short TTL — 60-300s per blueprint §24.1.
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([audience])
+}
+
+model PermissionState {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  // JSON array of enabled tool names. Defaults to all six tools enabled.
+  enabledToolsJson   String   @default("[\"query\",\"addFact\",\"updateFact\",\"forgetFact\",\"summarize\",\"timeline\"]")
+  // JSON array of granted agent origins, e.g. ["https://chatgpt.com"].
+  grantedOriginsJson String  @default("[]")
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Server-side session store for the demo-day cookie sessions (GitHub OAuth
+// substitute for ChatGPT OAuth). Keeps auth state out of the JWT/cookie body.
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  // Opaque, cryptographically-random session token (the cookie value).
+  token     String   @unique
+  // Audience scopes the session — the page origin the tools were registered
+  // for. Defaults to the site's own origin.
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
