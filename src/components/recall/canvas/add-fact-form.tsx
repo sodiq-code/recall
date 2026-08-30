@@ -142,6 +142,17 @@ export function AddFactForm() {
           data-mcp-required="true"
           data-mcp-maxlength={LIMITS.FACT_MAX_LENGTH}
         />
+        {/* Hidden tags input for declarative WebMCP form annotation.
+            Always in the DOM so a WebMCP-capable browser can synthesize the
+            full JSON Schema (content + tags) even when the form is collapsed.
+            The visible tags input (below, when expanded) handles user input. */}
+        <input
+          type="hidden"
+          name="tags"
+          data-mcp-type="array"
+          data-mcp-maxitems={LIMITS.TAG_MAX_PER_FACT}
+          data-mcp-description="Optional tags for the fact"
+        />
         {isExpanded && (
           <div className="mt-3 space-y-3 border-t border-border/40 pt-3">
             <div className="flex items-center gap-1.5">
@@ -152,9 +163,6 @@ export function AddFactForm() {
                 placeholder="tags (comma-separated, optional)"
                 className="h-8 border-0 bg-background/70 px-2 text-xs shadow-none"
                 aria-label="Fact tags"
-                name="tags"
-                data-mcp-type="array"
-                data-mcp-maxitems={LIMITS.TAG_MAX_PER_FACT}
               />
             </div>
             <div className="flex items-center justify-between">

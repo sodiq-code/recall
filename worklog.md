@@ -826,3 +826,57 @@ Stage Summary:
     → NOT SKIPPED: both imperative (lib/webmcp) and declarative (data-mcp-*)
     are implemented, so Recall exercises 9 WebMCP features (up from 7)
 - Awaiting the user's go-ahead to begin Task 8 (Demo recording + polish pass 1).
+
+---
+Task ID: verification-1-7
+Agent: Z.ai Code (orchestrator)
+Task: Comprehensive verification of Tasks 1-7 + fix declarative form annotation
+
+Work Log:
+- Ran a comprehensive end-to-end verification of all 7 tasks:
+  - Task 1 (Scaffold): /health ok + db connected, /api 6 tools + 6 endpoint
+    groups, all routes 200/404, CI + LICENSE + README + SECURITY.md exist ✅
+  - Task 2 (OAuth): /login 200, OAuth redirect 307 to GitHub with correct
+    client_id + state + scope, /app no-session → 307 redirect to /login,
+    /app with-session → 200, logout works ✅
+  - Task 3 (CRUD): create 5 facts, list 5, get one, update (content+tags),
+    query search "UPDATED" → 1 match, tags list, forget (soft-delete),
+    after forget 4 facts, restore (rollback), after restore 5 facts persist,
+    validation (empty → 400), unauthenticated → 401 ✅
+  - Task 4 (WebMCP): Agent tool-call simulator present, Permissions-Policy
+    header tools=(https://chatgpt.com), query handler works, summarize
+    handler works ✅
+  - Task 5 (Activity Feed): 11 audit entries logged (all mutations), live
+    activity feed with "live" badge + "every entry is signed" ✅
+  - Task 6 (Permissions): 6/6 tools enabled by default, disable summarize
+    works, token issued with signature (scope excludes disabled tool),
+    verify query (enabled) → valid, verify summarize (disabled) → invalid,
+    re-enable works, non-granted origin → 403, all 4 settings sections
+    render ✅
+  - Task 7 (Audit Export): ECDSA signature, public key JWK (EC P-256, no
+    private key d), 12 entries in the export, declarative form annotation
+    present ✅
+- Found and fixed one issue in Task 7: the declarative form annotation's
+  tags field (data-mcp-type="array" + data-mcp-maxitems) was missing from
+  the SSR HTML because the tags input was conditionally rendered (only
+  visible when the form is expanded). Added a hidden <input type="hidden"
+  name="tags"> with the data-mcp-* attributes that's always in the DOM, so
+  a WebMCP-capable browser can synthesize the full JSON Schema (content +
+  tags) even when the form is collapsed. Verified all 7 declarative
+  attributes now appear in the SSR HTML.
+- Browser test: /app renders with 0 console errors, 0 page errors, mobile
+  (390px) no horizontal overflow. All sections present (Memory canvas,
+  Activity feed, Agent tool-call simulator).
+
+Verification Results:
+- ✅ `bun run lint` — 0 errors, 0 warnings
+- ✅ `bun run typecheck` — tsc --noEmit clean
+- ✅ All 7 tasks pass their definition-of-done criteria
+- ✅ The declarative form annotation now exposes all 7 attributes in SSR
+- ✅ No regressions introduced by the fix
+
+Stage Summary:
+- All implementations from Task 1 through Task 7 are verified, tested, and
+  aligned with the blueprint. The only fix needed was the declarative form
+  annotation tags field, which is now resolved. The codebase is ready for
+  Task 8 (Demo recording + polish pass 1).
