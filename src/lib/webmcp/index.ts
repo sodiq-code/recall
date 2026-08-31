@@ -150,74 +150,76 @@ function safeStringify(value: unknown): string {
  * @param options.fromOrigins  (unused — kept for API compat; the built-in
  *   agent gets access by default)
  */
-export async function registerWebMCPTools(
+export function registerWebMCPTools(
   options: RegisterWebMCPToolsOptions,
-): Promise<RegisteredTools> {
+): RegisteredTools & { ready: Promise<RegisteredTools> } {
   const { tools } = options;
 
   if (!isWebMCPSupported()) {
-    return { unregister: () => {}, registered: [] };
+    const empty = { unregister: () => {}, registered: [] };
+    return { ...empty, ready: Promise.resolve(empty) };
   }
 
-  const abortControllers: AbortController[] = [];
+  // Create all AbortControllers synchronously
+  const abortControllers: AbortController[] = tools.map(() => new AbortController());
   const registered: string[] = [];
 
-  const registrationPromises = tools.map(async (tool) => {
-    const ac = new AbortController();
-    abortControllers.push(ac);
-
-    try {
-      await document.modelContext!.registerTool(
-        {
-          name: tool.name,
-          title: tool.title,
-          description: tool.description,
-          inputSchema: tool.inputSchema,
-          // The execute callback wraps the handler so:
-          // 1. The options.signal is available (per the spec)
-          // 2. The return value is normalized to MCP content format
-          // 3. Any thrown error becomes an isError response
-          async execute(
-            inputObject: Record<string, unknown>,
-            _executeOptions: { signal: AbortSignal },
-          ) {
-            try {
-              const result = await tool.execute(inputObject);
-              return toToolResponse(result);
-            } catch (error) {
-              return toErrorResponse(error);
-            }
-          },
-          annotations: tool.annotations,
-        },
-        // Do NOT pass exposedTo — the built-in agent gets access by default.
-        // Passing exposedTo would restrict exposure to only those origins.
-        {
-          signal: ac.signal,
-        },
-      );
-      registered.push(tool.name);
-    } catch (err) {
-      // A single tool registration failure must not block the others.
-      console.error(
-        `[recall] failed to register tool "${tool.name}"`,
-        err,
-      );
-    }
-  });
-
-  await Promise.allSettled(registrationPromises);
-
-  return {
-    registered,
-    unregister: () => {
-      for (const ac of abortControllers) {
-        try {
-          ac.abort();
-        } catch {
-          /* ignore — best-effort teardown */
-        }
+  const unregister = () => {
+    for (const ac of abortControllers) {
+      try {
+        ac.abort();
+      } catch {
+        /* ignore */
       }
-    },
+    }
   };
+
+  // Register tools SEQUENTIALLY — one at a time, waiting for each.
+  // Parallel registration (Promise.allSettled) causes a browser-internal
+  // race condition where one tool gets InvalidStateError.
+  const ready = (async () => {
+    for (let i = 0; i < tools.length; i++) {
+      const tool = tools[i];
+      const ac = abortControllers[i];
+
+      if (ac.signal.aborted) break;
+
+      try {
+        await document.modelContext!.registerTool(
+          {
+            name: tool.name,
+            title: tool.title,
+            description: tool.description,
+            inputSchema: tool.inputSchema,
+            async execute(
+              inputObject: Record<string, unknown>,
+              _executeOptions: { signal: AbortSignal },
+            ) {
+              try {
+                const result = await tool.execute(inputObject);
+                return toToolResponse(result);
+              } catch (error) {
+                return toErrorResponse(error);
+              }
+            },
+            annotations: tool.annotations,
+          },
+          {
+            signal: ac.signal,
+          },
+        );
+        registered.push(tool.name);
+      } catch (err) {
+        if (ac.signal.aborted) break;
+        console.error(
+          `[recall] failed to register tool "${tool.name}"`,
+          err,
+        );
+      }
+    }
+
+    return { registered, unregister };
+  })();
+
+  return { registered, unregister, ready };
 }
