@@ -6,7 +6,7 @@
  * entry, the API route calls `notifyAuditEvent()` to broadcast it to all of
  * the user's open Recall tabs via the mini-service.
  *
- * Flow (blueprint §22.5, §32 Day 5):
+ * Flow :
  *   1. The tool handler appends an audit entry to Turso (lib/audit)
  *   2. The tool handler calls notifyAuditEvent(userId, entry)
  *   3. This helper POSTs to the realtime mini-service's /emit endpoint

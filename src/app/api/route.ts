@@ -5,7 +5,7 @@ import { ALL_TOOLS } from "@/lib/webmcp/tools";
 /**
  * GET /api — the API root.
  *
- * Day 1 surface: a self-describing envelope that lists every endpoint Recall
+ * The root: a self-describing envelope that lists every endpoint Recall
  * exposes (the WebMCP tool surface + the internal HTTP/WebSocket API). This is
  * the single place to look up the API contract; it doubles as the machine-
  * readable manifest a judge (or agent) can introspect.

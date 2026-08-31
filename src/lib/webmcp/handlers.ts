@@ -7,13 +7,13 @@
  * Recall backend over same-origin fetch — the browser sends the session
  * cookie automatically, so the call is authenticated as the signed-in user.
  *
- * Blueprint §22.5: "All six tools use the same protocol: (1) ChatGPT calls
+ * The six tools use the same protocol: (1) ChatGPT calls
  * document.modelContext.[toolName](args) in the Recall tab; (2) the handler
  * executes in the page sandbox; (3) the handler calls the Recall backend via
  * authenticated fetch; (4) the backend performs the operation, appends to the
  * audit log; (5) the handler returns the result to ChatGPT."
  *
- * The handlers call the SAME /api/memory/* routes the canvas uses (Task 3),
+ * The handlers call the SAME /api/memory/* routes the canvas uses ,
  * so there is exactly one code path per operation — the agent and the user
  * see the same data with the same provenance.
  */
@@ -166,7 +166,7 @@ export async function forgetFactHandler(
  *
  * Calls POST /api/memory/summarize. Returns the top N facts ranked by
  * relevance score. The LLM (ChatGPT) does the prose synthesis — Recall only
- * returns the ranked facts (blueprint §25.2).
+ * returns the ranked facts .
  */
 export async function summarizeHandler(input: SummarizeInput): Promise<{
   facts: FactResult[];

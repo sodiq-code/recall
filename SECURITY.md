@@ -46,17 +46,17 @@ Secrets are **never** shipped to the client. The `lib/env.ts` module is the
 single server-side entry point for environment access; it validates every
 variable at boot and fails loudly in production when one is missing.
 
-## Demo-day notes
+## Authentication notes
 
-- GitHub OAuth is the demo-day substitute for ChatGPT OAuth (third-party
+- GitHub OAuth is the substitute for ChatGPT OAuth (third-party
   ChatGPT OAuth is not GA). This trade-off is documented in the README and
   on the `/login` page; the production plan swaps in ChatGPT OAuth when it
   ships to third parties.
 - The capability-token flow is enforced server-side even when the
   `permissions-policy: tools` header is unavailable, so the security model
-  does not depend on a single browser feature landing on demo day.
+  does not depend on a single browser feature.
 
 ## Reporting a vulnerability
 
-This is a hackathon project; there is no formal bounty program. If you find a
+There is no formal bounty program. If you find a
 security issue, open a private GitHub Security Advisory on the repository.

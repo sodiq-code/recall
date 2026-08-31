@@ -12,7 +12,7 @@ import { authConfigured } from "@/lib/env";
  * so the hero owns the first impression; it carries the mark, a single
  * primary nav link (Docs), the theme toggle, the repo link, and the Connect
  * CTA. The CTA's destination flips to /login once GitHub OAuth is configured
- * (Day 2); until then it points at the repo so the scaffold is never a dead
+ * ; until then it points at the repo so it is never a dead
  * end.
  */
 export function SiteHeader() {

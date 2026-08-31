@@ -12,8 +12,8 @@ import { authConfigured } from "@/lib/env";
  * The sign-in page. A single primary action: "Continue with GitHub". The
  * button hits /api/auth/oauth/github which starts the GitHub OAuth flow.
  *
- * Demo-day note (blueprint §21.1): GitHub OAuth is the demo-day substitute
- * for ChatGPT OAuth (third-party ChatGPT OAuth is not yet GA). The note is
+ * GitHub OAuth is the substitute
+ * for ChatGPT OAuth. The note is
  * shown directly on the page so judges understand the trade-off. The
  * production plan swaps in ChatGPT OAuth when it ships to third parties.
  *

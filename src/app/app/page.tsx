@@ -25,7 +25,7 @@ import { ErrorBoundary } from "@/components/recall/canvas/error-boundary";
  *
  * Gated on a valid session. If the user is not signed in, redirect to /login.
  * Otherwise renders the memory canvas (cards, search, add/edit/forget), the
- * audit feed stub, and the realtime connection status indicator.
+ * audit feed, and the realtime connection status indicator.
  *
  * The page is a server component (for the session check + redirect), but the
  * MemoryCanvas itself is a client component (TanStack Query + optimistic

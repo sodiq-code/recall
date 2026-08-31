@@ -16,7 +16,7 @@ import { exportAuditLog } from "@/lib/audit";
  * payload, verify the signature with the public key, and confirm the audit
  * log hasn't been tampered with — independent of the database.
  *
- * Blueprint §32 (Day 7): "user exports audit log; verifies JWS signature
+ * The audit export signs the bundle; users verify the JWS signature
  * with site's public key."
  */
 export async function GET() {

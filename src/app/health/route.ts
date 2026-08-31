@@ -8,7 +8,7 @@ import { APP_VERSION, SERVICE_NAME } from "@/lib/constants";
  * Used by:
  *   - Vercel's deployment checks
  *   - the CI smoke test
- *   - uptime monitoring (blueprint §29.7)
+ *   - uptime monitoring 
  *
  * Returns 200 with a status envelope when the app and database are reachable.
  * Returns 503 when the database is unreachable so the deployment is not marked

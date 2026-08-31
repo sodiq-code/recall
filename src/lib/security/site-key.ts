@@ -1,14 +1,14 @@
 /**
- * Recall — site signing key (foundation; fully wired on Day 6/7).
+ * Recall — site signing key .
  *
  * The site key signs audit entries and capability tokens so a user (or judge)
  * can verify any artifact Recall emits without trusting the database. It is
  * generated per-user on first sign-in via WebCrypto `subtle.generateKey`,
  * stored as a JWK, and never derived client-side.
  *
- * Day 1 establishes the key-availability contract: `getSiteKey()` returns a
+ * The module establishes the key-availability contract: `getSiteKey()` returns a
  * usable CryptoKey for the given user (generating + persisting one if none
- * exists). Day 6 uses it to sign capability tokens; Day 7 uses it to sign the
+ * exists). It signs capability tokens and the
  * audit-export bundle.
  */
 import { db } from "@/lib/db";
@@ -41,7 +41,7 @@ export async function getSiteKey(userId: string): Promise<CryptoKey> {
     return key;
   }
 
-  // First use — generate and persist. Day 6 hardens this with key rotation.
+  // First use — generate and persist. A future release will add key rotation.
   const keyPair = (await crypto.subtle.generateKey(
     { name: "ECDSA", namedCurve: "P-256" },
     true,
@@ -61,7 +61,7 @@ export async function getSiteKey(userId: string): Promise<CryptoKey> {
 
 /**
  * Sign an arbitrary payload with the user's site key and return a detached
- * JWS signature (base64url). Day 6/7 wires this into capability tokens and
+ * JWS signature (base64url). This is used for capability tokens and
  * audit entries.
  */
 export async function signWithSiteKey(
@@ -80,7 +80,7 @@ export async function signWithSiteKey(
 
 /**
  * Verify a detached signature against a user's site key. Used by the audit
- * export verifier (Day 7) and any external party that wants to check a
+ * export verifier and any external party that wants to check a
  * Recall-emitted artifact against the user's public key.
  */
 export async function verifyWithSiteKey(

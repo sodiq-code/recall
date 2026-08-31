@@ -9,7 +9,7 @@ import { getSessionUser, type SessionUser } from "@/lib/auth/session";
  * or a 401 response. There is no other auth check in the API layer — the
  * session IS the authentication.
  *
- * Blueprint §21.1: "the browser is the trust boundary." The session cookie is
+ *  The session cookie is
  * httpOnly + sameSite=lax; the capability token (lib/capability) is the agent
  * credential layered on top for WebMCP tool calls (next tasks).
  */

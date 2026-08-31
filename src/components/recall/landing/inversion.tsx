@@ -4,8 +4,8 @@ import { Reveal, StaggerGroup, StaggerItem, LiftOnHover } from "./motion-primiti
 /**
  * Recall — "the inversion" section.
  *
- * The single mechanism that makes Recall fundamentally different (blueprint
- * §17). Every prior MCP hackathon had the agent as the subject — the agent
+ * The single mechanism that makes Recall fundamentally different 
+ * . Had the agent as the subject — the agent
  * calls servers. Recall takes WebMCP's spec topology seriously: the website
  * publishes the tools, the agent (ChatGPT) is the consumer, the browser is
  * the trust boundary. This is the one paragraph a judge remembers.
@@ -19,7 +19,7 @@ const PILLARS = [
   {
     icon: Bot,
     title: "The agent is the client.",
-    body: "ChatGPT calls Recall's tools through the browser. Recall runs zero LLMs of its own — no second model to fail on demo day.",
+    body: "ChatGPT calls Recall's tools through the browser. Recall runs zero LLMs of its own — no second model to fail.",
   },
   {
     icon: ShieldCheck,

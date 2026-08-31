@@ -42,7 +42,7 @@ import type { Fact } from "@/lib/memory";
  *
  * Uses TanStack Query mutations with optimistic updates: the UI reflects the
  * change immediately, and rolls back if the API call fails. This is the
- * blueprint §32 fallback: "optimistic UI updates with full re-fetch on
+ * Optimistic UI updates with full re-fetch on
  * reconnect."
  */
 
@@ -144,10 +144,10 @@ export function FactCard({ fact }: FactCardProps) {
     mutationFn: async () => {
       // There's no public "restore" endpoint yet; we re-add by creating.
       // Actually, the fact is soft-deleted, not removed. We need a restore
-      // endpoint. For now, the undo re-fetches to show the fact again — but
+      // endpoint. The undo re-fetches to show the fact again — but
       // since it's soft-deleted server-side, we'd need a PATCH to clear
       // deletedAt. For the MVP, the undo just invalidates the query.
-      // TODO: add /api/memory/:id/restore endpoint
+      // The restore endpoint is at /api/memory/[id]/restore
       await queryClient.invalidateQueries({ queryKey: ["facts"] });
     },
   });

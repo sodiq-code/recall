@@ -10,14 +10,14 @@ import type { InArgs } from "@libsql/client";
  * from the session in the route handler) so the access is always scoped —
  * there is no global "list all facts" path.
  *
- * The Fact model (blueprint §24.1):
+ * The Fact model:
  *   - content: 1-500 chars (validated)
  *   - tags: max 10 per fact, each 1-30 chars, lowercase alphanumeric + hyphen
  *   - source: "user" (typed in Recall) or "agent" (added via addFact tool)
  *   - sourceOrigin: "recall.app" or a granted agent origin
  *   - deletedAt: soft-delete (forget) — the audit log retains integrity via
  *     result hashes, so a forgotten fact can be rolled back
- *   - relevanceScore: frequency-based, incremented on query hits (§23.3)
+ *   - relevanceScore: frequency-based, incremented on query hits 
  *
  * Tags are stored in a normalized FactTag table (factId, tag) with a unique
  * constraint. create/update sync the FactTag rows to match the provided tags.
@@ -359,7 +359,7 @@ export async function restoreFact(
  * Query facts by natural-language string + optional tag filters.
  *
  * Deterministic: substring match on content + tag match, sorted by relevance
- * score (blueprint §23.3, §25.2). Semantic search is a SHOULD/COULD for the
+ * score . Semantic search is a  for the
  * post-MVP version.
  */
 export async function queryFacts(
@@ -401,7 +401,7 @@ export async function queryFacts(
 }
 
 /**
- * Summarize: return the top N facts by relevance score (blueprint §25.2).
+ * Summarize: return the top N facts by relevance score .
  * Deterministic — the LLM (ChatGPT) does the prose synthesis, not Recall.
  */
 export async function summarizeFacts(

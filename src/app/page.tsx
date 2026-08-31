@@ -18,7 +18,7 @@ import { CtaBand } from "@/components/recall/landing/cta-band";
  * wrapper uses min-h-screen + flex-col with the footer pinned via mt-auto so
  * the footer sticks on short viewports and pushes down on long ones.
  *
- * Day 1 scope (blueprint §32): a placeholder landing page is part of the
+ * The landing page is part of the
  * scaffold definition-of-done. This is intentionally more than "hello world"
  * — the landing page is the repo's first impression for judges, so it ships
  * polished from the first commit.

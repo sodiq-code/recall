@@ -14,13 +14,13 @@ import type { InArgs } from "@libsql/client";
  * agent origins are granted access. Every user has exactly one PermissionState
  * row (auto-created on first access).
  *
- * Blueprint §24.1 (PermissionState):
+ * 
  *   - enabledTools: Set of tool names (default: all six)
  *   - grantedOrigins: Set of HTTPS URLs (default: ["https://chatgpt.com"])
  *
- * The WebMCP bridge (Task 4) registers only the ENABLED tools; when the user
+ * The WebMCP bridge registers only the ENABLED tools; when the user
  * disables a tool, the bridge re-registers without it. The capability-token
- * layer (Task 6) checks the scope against the enabled set before issuing a
+ * layer checks the scope against the enabled set before issuing a
  * token.
  */
 

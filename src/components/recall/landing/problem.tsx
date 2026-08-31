@@ -5,7 +5,7 @@ import { Reveal, StaggerGroup, StaggerItem, LiftOnHover } from "./motion-primiti
  * Recall — "the problem" section.
  *
  * The four concrete failures of ChatGPT's opaque memory, drawn from the
- * blueprint §16 (Problem). Each is a sentence a target user would say, not
+ * . Each is a sentence a target user would say, not
  * abstract complaint — so a judge reads it as a real pain, not marketing.
  */
 const FAILURES = [

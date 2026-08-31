@@ -7,7 +7,7 @@
  * six ENABLED tools). It is signed with the user's site key (WebCrypto) so a
  * token is verifiable independent of the database.
  *
- * Blueprint §17: "the capability token is the credential; the audit log is
+ * The capability token is the credential; the audit log is
  * the receipt."
  *
  * The token's scope is ALWAYS intersected with the user's currently-enabled

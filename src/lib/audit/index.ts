@@ -1,14 +1,14 @@
 /**
- * Recall — audit log helpers (foundation; fully wired on Day 5).
+ * Recall — audit log helpers .
  *
  * Every agent tool call appends one immutable, signed entry to the audit log.
- * The audit log is Recall's observability layer (blueprint §29.8): it is the
+ * The audit log is Recall's observability layer : it is the
  * receipt the user checks ChatGPT's claims against, and the exportable
- * artifact signed with the site key (Day 7).
+ * artifact signed with the site key .
  *
- * On Day 1 this module establishes the append/list contract and the
- * result-hash computation. The signing step (Day 6/7) and the WebSocket
- * fan-out (Day 5) layer on top of this contract.
+ * This module establishes the append/list contract and the
+ * result-hash computation. 
+ * fan-out layer on top of this contract.
  */
 import { createHash } from "node:crypto";
 import { db } from "@/lib/db";
@@ -45,8 +45,8 @@ export function computeResultHash(result: unknown): string {
 /**
  * Append an audit entry for a tool call.
  *
- * Day 5 wires the WebSocket fan-out (broadcast to all open Recall tabs).
- * Day 6 attaches the capability token id and the detached JWS signature.
+ * The WebSocket fan-out is wired (broadcast to all open Recall tabs).
+ * Capability token id and detached JWS signature are attached.
  */
 export async function appendAuditEntry(input: {
   userId: string;
@@ -98,7 +98,7 @@ export async function appendAuditEntry(input: {
 
 /**
  * List recent audit entries for a user (newest first).
- * Used by the activity feed (Day 5) and the audit export (Day 7).
+ * Used by the activity feed and the audit export.
  */
 export async function listAuditEntries(
   userId: string,
@@ -143,7 +143,7 @@ export interface AuditEntryView {
 }
 
 // ---------------------------------------------------------------------------
-// Export — signed JWS bundle (Day 7)
+// Export — signed JWS bundle 
 // ---------------------------------------------------------------------------
 
 import { signWithSiteKey } from "@/lib/security/site-key";
@@ -174,7 +174,7 @@ export interface SignedAuditExport {
 /**
  * Export the user's full audit log as a signed JWS bundle.
  *
- * Blueprint §32 (Day 7): "user exports audit log; verifies JWS signature
+ * The audit export signs the bundle; users verify the JWS signature
  * with site's public key." The bundle is the payload; the signature is the
  * detached JWS so a judge (or the user, or an external auditor) can verify
  * the bundle hasn't been tampered with — independent of the database.

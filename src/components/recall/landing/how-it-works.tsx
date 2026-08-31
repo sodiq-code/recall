@@ -4,7 +4,7 @@ import { Reveal, StaggerGroup, StaggerItem, LiftOnHover } from "./motion-primiti
 /**
  * Recall — "how it works" section.
  *
- * The four-step user journey (compressed from blueprint §19). Each step is one
+ * The four-step user journey . Each step is one
  * sentence so a judge can trace the demo from sign-up to audited answer in a
  * single glance.
  */
@@ -12,7 +12,7 @@ const STEPS = [
   {
     icon: LogIn,
     title: "Sign in once.",
-    body: "Authenticate at recall.app. GitHub OAuth stands in for ChatGPT OAuth on demo day; the production plan swaps in ChatGPT OAuth when it ships to third parties.",
+    body: "Authenticate at recall.app. GitHub OAuth is used for authentication. ChatGPT OAuth will be added when available to third parties.",
   },
   {
     icon: Brain,

@@ -10,8 +10,8 @@
  * The WebMCP browser API surface we model here mirrors the spec's
  * `document.modelContext.registerTool()` call shape (see
  * https://webmcp.devpost.com/ — "What to Submit"). The actual runtime call is
- * feature-detected in `lib/webmcp/index.ts` so Day 1 can ship the type
- * contracts before the live integration lands on Day 4.
+ * feature-detected in `lib/webmcp/index.ts` so the types can ship
+ * contracts before the live integration.
  */
 
 /** JSON Schema object — the shape WebMCP expects for `inputSchema`. */
@@ -22,7 +22,7 @@ export interface JsonSchema {
   additionalProperties?: boolean;
 }
 
-/** WebMCP tool annotations (blueprint §22.3, §6.3.x of the spec). */
+/** WebMCP tool annotations (per the WebMCP spec). */
 export interface ToolAnnotations {
   /** True for read-only tools (query, summarize, timeline). */
   readOnlyHint?: boolean;
@@ -61,7 +61,7 @@ export interface RegisteredTools {
   registered: string[];
 }
 
-/** Capability-token-verified invocation context (Day 6). */
+/** Capability-token-verified invocation context. */
 export interface ToolCallContext {
   userId: string;
   callerOrigin: string;

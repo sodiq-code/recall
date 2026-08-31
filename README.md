@@ -17,7 +17,7 @@ Built for [The WebMCP Challenge](https://webmcp.devpost.com/) (OpenAI / Devpost)
 
 ## The inversion (the one idea)
 
-Every prior MCP hackathon had the **agent as the subject** — the agent calls
+Had the **agent as the subject** — the agent calls
 servers. Recall takes WebMCP's spec topology seriously and ships the
 **inversion** as the product:
 
@@ -62,7 +62,7 @@ annotations so the agent knows how it may use it.
 ## How it works
 
 1. **Sign in once.** Authenticate at Recall. GitHub OAuth stands in for
-   ChatGPT OAuth on demo day; the production plan swaps in ChatGPT OAuth when
+   ChatGPT OAuth on subsequent release; the production plan swaps in ChatGPT OAuth when
    it ships to third parties.
 2. **See your memory.** Recall renders your facts as a canvas of editable,
    taggable cards. Add, edit, or forget any fact directly — nothing is hidden.
@@ -116,7 +116,7 @@ annotations so the agent knows how it may use it.
 > **Note on deployment target.** The original architecture targets
 > Cloudflare Workers + Durable Objects for per-user stateful edge storage.
 > This repository ships the sanctioned Vercel-only fallback (validated in
-> the blueprint's validation plan: *"Use only Vercel; switch Durable Objects
+> our architecture decision: *"Use only Vercel; switch Durable Objects
 > to Vercel Postgres"*). State lives in Turso (libSQL); the WebSocket fan-out
 > runs as a dedicated mini-service.
 
@@ -127,7 +127,7 @@ annotations so the agent knows how it may use it.
 - **[Tailwind CSS 4](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/)** — accessible, composable primitives
 - **[Turso](https://turso.tech/) (libSQL)** — edge-replicated SQLite database (works on Vercel serverless AND locally)
 - **[socket.io](https://socket.io/)** — real-time WebSocket fan-out (mini-service)
-- **[GitHub OAuth](https://docs.github.com/en/apps/oauth-building-authentication-apps)** — demo-day substitute for ChatGPT OAuth
+- **[GitHub OAuth](https://docs.github.com/en/apps/oauth-building-authentication-apps)** — substitute for ChatGPT OAuth
 - **[WebCrypto](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API)** — capability tokens + signed audit log
 - **[TanStack Query](https://tanstack.com/query/latest)** — client-side data fetching with optimistic updates
 - **[GitHub Actions](https://github.com/features/actions)** — lint · typecheck · build on every PR

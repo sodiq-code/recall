@@ -7,7 +7,7 @@
  * and the audit log (lib/audit) all agree on names and shapes.
  */
 
-/** The six WebMCP tools Recall publishes (blueprint §22.3). */
+/** The six WebMCP tools Recall publishes . */
 export const TOOL_NAMES = [
   "query",
   "addFact",
@@ -19,7 +19,7 @@ export const TOOL_NAMES = [
 
 export type ToolName = (typeof TOOL_NAMES)[number];
 
-/** Read-only tools — annotated with `readOnlyHint: true` per WebMCP §6.3.x. */
+/** Read-only tools — annotated with `readOnlyHint: true` per the WebMCP spec. */
 export const READ_ONLY_TOOLS: ReadonlySet<ToolName> = new Set<ToolName>([
   "query",
   "summarize",
@@ -35,7 +35,7 @@ export const UNTRUSTED_CONTENT_TOOLS: ReadonlySet<ToolName> = new Set<ToolName>(
 /** Default granted agent origins (the ChatGPT in-app browser). */
 export const DEFAULT_GRANTED_ORIGINS = ["https://chatgpt.com"] as const;
 
-/** Capability token TTL defaults (blueprint §24.1: 60-300s). */
+/** Capability token TTL defaults . */
 export const CAPABILITY_TOKEN_DEFAULT_TTL_SECONDS = 120;
 export const CAPABILITY_TOKEN_MIN_TTL_SECONDS = 60;
 export const CAPABILITY_TOKEN_MAX_TTL_SECONDS = 300;
@@ -43,7 +43,7 @@ export const CAPABILITY_TOKEN_MAX_TTL_SECONDS = 300;
 /** The default set of enabled tools for a new user — all six. */
 export const DEFAULT_ENABLED_TOOLS: ToolName[] = [...TOOL_NAMES];
 
-/** Validation bounds mirrored from the blueprint §24.7. */
+/** Validation bounds mirrored from the data model spec. */
 export const LIMITS = {
   FACT_MIN_LENGTH: 1,
   FACT_MAX_LENGTH: 500,
@@ -60,7 +60,7 @@ export const LIMITS = {
 /** Capability token audience for the ChatGPT in-app browser. */
 export const CHATGPT_AUDIENCE = "https://chatgpt.com";
 
-/** Cookie name for the demo-day session (GitHub OAuth substitute). */
+/** Cookie name for the session. */
 export const SESSION_COOKIE = "recall_session";
 
 /** Cookie options for the session cookie. */

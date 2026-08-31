@@ -5,10 +5,10 @@ import { Reveal } from "./motion-primitives";
 /**
  * Recall — audit-feed preview (static).
  *
- * A faithful mock of the live activity feed that lands on Day 5. It renders the
+ * A faithful mock of the live activity feed that shows real-time updates. It renders the
  * "wow moment" of the demo: ChatGPT calls query(&quot;hobbies&quot;) → Recall returns
  * three facts → the entry appears in the feed in real time. Today it is a
- * static illustration of the product's payoff; Day 5 swaps it for the
+ * static illustration of the product's payoff; the live feed swaps it for
  * WebSocket-backed live feed.
  *
  * Polish notes:

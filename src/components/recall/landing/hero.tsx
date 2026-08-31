@@ -12,7 +12,7 @@ import { Reveal } from "./motion-primitives";
  * Owns the first impression. The headline states the inversion (the website
  * is the memory; the agent is the client). The audit-feed preview on the
  * right is the "wow moment" rendered statically — it shows exactly what the
- * user sees the moment ChatGPT calls a Recall tool. It becomes live on Day 5.
+ * user sees the moment ChatGPT calls a Recall tool. It updates in real time.
  *
  * Polish:
  *   - The two-line headline renders the gradient on the second line ("your

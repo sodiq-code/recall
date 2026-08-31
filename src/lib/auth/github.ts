@@ -6,7 +6,7 @@ import { env } from "@/lib/env";
 /**
  * Recall — GitHub OAuth helpers.
  *
- * Implements the GitHub OAuth Web Application Flow (blueprint §21.1, §26.2):
+ * Implements the GitHub OAuth Web Application Flow :
  *   1. redirect the user to github.com/login/oauth/authorize
  *   2. GitHub redirects back with a `code` + the `state` we sent
  *   3. exchange the code for an access token (POST /login/oauth/access_token)
@@ -17,8 +17,8 @@ import { env } from "@/lib/env";
  * short-lived cookie, and verified on callback. This prevents an attacker
  * from injecting their own authorization code into the user's session.
  *
- * GitHub OAuth is the demo-day substitute for ChatGPT OAuth (blueprint §21.1):
- * third-party ChatGPT OAuth is not yet GA. The README and /login page document
+ * GitHub OAuth is the substitute for ChatGPT OAuth:
+ * third-party ChatGPT OAuth is not available. The README and /login page document
  * this trade-off; the production plan swaps in ChatGPT OAuth when it ships.
  */
 

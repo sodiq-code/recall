@@ -18,13 +18,13 @@
  *     so the playground demonstrates the full provenance contract, not just
  *     the happy path.
  *
- * Blueprint §24.5 ("Memory model"): "Simulated/demo data: the demo-day
+ * Demo data: the
  * pre-filled memory (5-10 facts the user starts with, clearly marked
  * 'demo')." This is exactly that seed set.
  */
 import type { ToolName } from "@/lib/constants";
 
-/** A single fact in the demo vault. Mirrors the Fact type (blueprint §24.1). */
+/** A single fact in the demo vault. Mirrors the Fact type. */
 export interface DemoFact {
   id: string;
   content: string;
@@ -37,7 +37,7 @@ export interface DemoFact {
   demo: boolean;
 }
 
-/** A simulated audit entry. Mirrors AuditEntry (blueprint §24.1). */
+/** A simulated audit entry. Mirrors AuditEntry. */
 export interface DemoAuditEntry {
   id: string;
   timestamp: number;
@@ -85,7 +85,7 @@ export const DEMO_FACTS: DemoFact[] = [
   },
   {
     id: "fact_04",
-    content: "Working on the WebMCP Challenge hackathon (OpenAI / Devpost).",
+    content: "Working on the WebMCP Challenge.",
     tags: ["work", "project"],
     source: "user",
     sourceOrigin: "recall.app",
@@ -277,7 +277,7 @@ export function executeDemoToolCall(
       result = {
         summary: top.map(toPublicFact),
         count: top.length,
-        ranking: "relevanceScore (frequency-based, blueprint §23.3)",
+        ranking: "relevanceScore (frequency-based)",
       };
       resultCount = top.length;
       break;

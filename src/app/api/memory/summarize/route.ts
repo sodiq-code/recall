@@ -8,7 +8,7 @@ import { appendAuditEntry } from "@/lib/audit";
  *
  * Body: { tags?: string[], limit?: number }
  *
- * Returns the top N facts ranked by relevance score (blueprint §25.2). The
+ * Returns the top N facts ranked by relevance score . The
  * LLM (ChatGPT) does the prose synthesis — Recall only returns the ranked
  * facts, so there is no LLM cost on Recall's side.
  */

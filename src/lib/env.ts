@@ -5,7 +5,7 @@ import { z } from "zod";
  *
  * Recall never reads `process.env` directly outside this module. Every secret
  * the application needs is declared here, validated once at boot, and exposed
- * as a typed `env` object. This keeps the Day 2+ work (OAuth, signing keys,
+ * as a typed `env` object. This keeps the auth work (OAuth, signing keys,
  * capability tokens) honest: a missing variable fails loudly at startup, not
  * silently at runtime.
  *
@@ -30,7 +30,7 @@ const envSchema = z.object({
   // The site name shown in the UI and audit log provenance.
   NEXT_PUBLIC_SITE_NAME: z.string().default("Recall"),
 
-  // --- Auth (GitHub OAuth — demo-day substitute for ChatGPT OAuth) ---
+  // --- Auth (GitHub OAuth) ---
   GITHUB_CLIENT_ID: z.string().min(1, "GITHUB_CLIENT_ID is required"),
   GITHUB_CLIENT_SECRET: z.string().min(1, "GITHUB_CLIENT_SECRET is required"),
   // Random 32+ char string used to sign the session cookie.
@@ -52,7 +52,7 @@ function loadEnv(): Env {
       .map((i) => `  • ${i.path.join(".") || "(root)"}: ${i.message}`)
       .join("\n");
     // Fail loudly in non-dev environments; warn but continue in dev so the
-    // landing page can render during initial scaffold (Day 1).
+    // landing page can render during initial setup.
     if (process.env.NODE_ENV === "production") {
       throw new Error(`Invalid environment configuration:\n${issues}`);
     }
@@ -64,7 +64,7 @@ function loadEnv(): Env {
 
 export const env = loadEnv();
 
-/** True when all Day 2+ secrets (GitHub OAuth) are configured. */
+/** True when all auth secrets (GitHub OAuth) are configured. */
 export const authConfigured = Boolean(
   env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET,
 );

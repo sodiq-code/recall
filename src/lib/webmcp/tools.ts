@@ -2,13 +2,13 @@
  * Recall — the six WebMCP tool definitions.
  *
  * This is the canonical source of truth for the tool surface Recall publishes.
- * The schemas and annotations here match the blueprint §26.1 exactly and are
+ * The schemas and annotations here match the WebMCP spec and are
  * reused by:
  *   - the client-side registration module (`lib/webmcp/index.ts`)
  *   - the server-side tool handlers (`app/api/memory/*`, `app/api/audit/*`)
  *   - the permission model (`lib/capability`) and audit log (`lib/audit`)
  *
- * The `execute` handlers are wired on Day 4. On Day 1 the tool definitions
+ * The `execute` handlers are wired to the API routes. The tool definitions
  * exist so the type contract is in place and the landing page can render
  * them in the "six tools" explainer.
  */
@@ -148,7 +148,7 @@ export const forgetFactTool: ToolSpec = {
 /**
  * summarize — return a deterministic structured summary (top N facts).
  * Read-only, trusted. The LLM (ChatGPT) does the prose synthesis; Recall
- * only returns ranked facts (blueprint §25.2).
+ * only returns ranked facts .
  */
 export const summarizeTool: ToolSpec = {
   title: "Summarize Memory",

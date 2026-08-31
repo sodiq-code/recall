@@ -12,7 +12,7 @@ import { appendAuditEntry } from "@/lib/audit";
  * It's also exposed here so the /app canvas can power its search box.
  *
  * Deterministic: substring match on content + tag match, sorted by relevance
- * score (blueprint §23.3).
+ * score .
  */
 export async function POST(request: Request) {
   const auth = await requireUser();

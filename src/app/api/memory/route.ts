@@ -71,7 +71,7 @@ export async function POST(request: Request) {
       tags: body.tags,
     });
 
-    // Append the audit entry (unsigned for now; Day 6 signs it).
+    // Append the audit entry.
     await appendAuditEntry({
       userId: auth.user.id,
       callerOrigin: "recall.app",

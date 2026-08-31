@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 /**
  * Recall — branded 404.
  *
- * Every nav link that points at a route built on a later day (e.g. /app on
- * Day 1) lands here rather than the default Next.js 404. Keeps the scaffold
+ * Branded 404 page
+ * lands here rather than the default Next.js 404.
  * polished from the first commit.
  */
 export default function NotFound() {
