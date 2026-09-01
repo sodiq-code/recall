@@ -1061,3 +1061,50 @@ Stage Summary:
   Turso DB already had the Recall schema + data from the previous deploy.
 - The user can sign in via GitHub OAuth at /login to see the full
   experience with their real data.
+
+---
+Task ID: two-stage-search
+Agent: Z.ai Code (orchestrator)
+Task: Implement two-stage search (tag match + smart fallback), remove semantic search
+
+Work Log:
+- User asked for two improvements to the query tool and to remove the
+  semantic (LLM) search:
+  1. Also search tags (not just content)
+  2. Smart empty-result fallback (return recent facts when 0 matches)
+- Modified `queryFacts()` in `src/lib/memory/index.ts`:
+  - LEFT JOIN FactTag when a query string is present
+  - Content OR tag substring match: `LOWER(f.content) LIKE ? OR LOWER(ft.tag) LIKE ?`
+  - SELECT DISTINCT to avoid duplicate rows when a fact has multiple matching tags
+  - Querying "preferences" now finds facts tagged #preferences even if the
+    word isn't in the content
+- Simplified `/api/memory/query` route to two stages:
+  - Stage 1: queryFacts() (substring + tag match)
+  - Stage 2: if 0 results, listFacts() returns recent facts + a note
+  - Response includes `fallback` (bool) + `note` (string)
+- Removed the semantic search layer entirely:
+  - Deleted `src/lib/memory/semantic.ts`
+  - Removed z-ai-web-dev-sdk dependency
+  - Reverted WebMCP query handler to simpler shape (fallback + note, no
+    expanded/expandedTerms)
+  - Reverted the exports in memory/index.ts (mapFact, fetchTagsForFacts,
+    FactRow back to module-private)
+- Updated the WebMCP test panel banner: shows an amber "Fallback results"
+  banner with the note when fallback is used (no more expansion banner)
+
+Verification (production, recall-app-one.vercel.app, real user data):
+- ✅ query "climbing" → 1 result, fallback=false, "I like rock climbing."
+- ✅ query "hobbies" → 5 results, fallback=true, note="No facts match
+  'hobbies'. Showing your 5 most recent facts." (includes rock climbing)
+- ✅ query "vacation" → 1 result, fallback=false, "i'm going to vacation now"
+- ✅ `bun run lint` — 0 errors
+- ✅ `bun run typecheck` — clean
+- ✅ Deployed to Vercel production (recall-app-one.vercel.app +
+  my-project-alpha-puce-76.vercel.app)
+
+Stage Summary:
+- The query tool now searches both content AND tags, and never returns a
+  jarring empty result. When there's no match, it shows the user's most
+  recent facts with a clear note explaining what happened. The LLM-based
+  semantic search has been removed per user request — the search is now
+  fully deterministic and fast.
