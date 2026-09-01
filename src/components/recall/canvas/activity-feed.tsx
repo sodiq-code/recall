@@ -174,6 +174,10 @@ export function ActivityFeed() {
     return [...liveOnly, ...fetched].slice(0, 50);
   }, [data, liveEntries]);
 
+  // Limit the feed to the 15 most recent entries to avoid clutter
+  const displayEntries = allEntries.slice(0, 15);
+  const hiddenCount = allEntries.length - displayEntries.length;
+
   return (
     <div className="rounded-2xl border border-border/60 bg-card/40 p-6">
       <div className="mb-4 flex items-center justify-between">
@@ -212,12 +216,17 @@ export function ActivityFeed() {
           </p>
         </div>
       ) : (
-        <ScrollArea className="max-h-[500px]">
+        <ScrollArea className="max-h-[400px]">
           <div className="space-y-1.5 pr-1">
-            {allEntries.map((entry) => (
+            {displayEntries.map((entry) => (
               <AuditEntryRow key={entry.id} entry={entry} />
             ))}
           </div>
+          {hiddenCount > 0 && (
+            <p className="mt-2 text-center text-[10px] text-muted-foreground/50">
+              {hiddenCount} more entries in the full audit log (exportable from Settings)
+            </p>
+          )}
         </ScrollArea>
       )}
 
