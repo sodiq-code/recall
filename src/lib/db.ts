@@ -31,23 +31,29 @@ const globalForDb = globalThis as unknown as {
   __recallLibsql?: Client;
 };
 
-function resolveTursoUrl(): string {
-  const url = process.env.TURSO_DATABASE_URL;
-  const token = process.env.TURSO_AUTH_TOKEN;
-  if (!url || url === "undefined") {
-    throw new Error(
-      "TURSO_DATABASE_URL is not set. Ensure .env is loaded with the Turso connection URL.",
-    );
+function resolveDbUrl(): string {
+  // Prefer Turso (production) when configured.
+  const tursoUrl = process.env.TURSO_DATABASE_URL;
+  const tursoToken = process.env.TURSO_AUTH_TOKEN;
+  if (tursoUrl && tursoUrl !== "undefined") {
+    if (tursoToken && !tursoUrl.includes("authToken=")) {
+      return `${tursoUrl}?authToken=${tursoToken}`;
+    }
+    return tursoUrl;
   }
-  if (token && !url.includes("authToken=")) {
-    return `${url}?authToken=${token}`;
+  // Dev fallback: local SQLite file via DATABASE_URL (file:path).
+  const localUrl = process.env.DATABASE_URL;
+  if (localUrl && localUrl !== "undefined") {
+    return localUrl;
   }
-  return url;
+  throw new Error(
+    "No database configured. Set TURSO_DATABASE_URL (production) or DATABASE_URL=file:path (dev).",
+  );
 }
 
 function getClient(): Client {
   if (!globalForDb.__recallLibsql) {
-    globalForDb.__recallLibsql = createClient({ url: resolveTursoUrl() });
+    globalForDb.__recallLibsql = createClient({ url: resolveDbUrl() });
   }
   return globalForDb.__recallLibsql;
 }

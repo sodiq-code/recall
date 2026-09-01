@@ -121,9 +121,9 @@ export function AddFactForm() {
         // form's named fields, so the add-fact form is both an HTML form (for
         // the user) and a WebMCP tool (for the agent) — one code path, two
         // consumers. toolautosubmit lets the agent submit the form after filling.
-        toolname="addFact"
-        tooldescription="Add a new fact to the user's memory vault."
-        toolautosubmit
+        data-mcp-tool="addFact"
+        data-mcp-description="Add a new fact to the user's memory vault."
+        data-mcp-autosubmit="true"
       >
         <Textarea
           value={content}
@@ -137,7 +137,10 @@ export function AddFactForm() {
           maxLength={LIMITS.FACT_MAX_LENGTH}
           aria-label="Fact content"
           name="content"
-          toolparamdescription="The fact text, 1-500 characters."
+          data-mcp-param="content"
+          data-mcp-description="The fact text, 1-500 characters."
+          data-mcp-required="true"
+          data-mcp-maxlength={String(LIMITS.FACT_MAX_LENGTH)}
           required
         />
         {/* Hidden tags input for declarative WebMCP form annotation.
@@ -147,7 +150,10 @@ export function AddFactForm() {
         <input
           type="hidden"
           name="tags"
-          toolparamdescription="Optional tags for the fact (comma-separated, max 10)."
+          data-mcp-param="tags"
+          data-mcp-description="Optional tags for the fact (comma-separated, max 10)."
+          data-mcp-type="array"
+          data-mcp-maxitems={String(LIMITS.TAG_MAX_PER_FACT)}
         />
         {isExpanded && (
           <div className="mt-3 space-y-3 border-t border-border/40 pt-3">

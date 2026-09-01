@@ -6,6 +6,7 @@ import { SiteFooter } from "@/components/recall/site-footer";
 import { RecallMark } from "@/components/recall/recall-mark";
 import { Button } from "@/components/ui/button";
 import { getSessionUser } from "@/lib/auth/session";
+import { authConfigured } from "@/lib/env";
 
 /**
  * Recall — /login.
@@ -21,12 +22,19 @@ import { getSessionUser } from "@/lib/auth/session";
  * Error handling: if GitHub redirected back with ?error=..., we show a
  * friendly message explaining the failure. This is a server component so we
  * read the search params from the URL.
+ *
+ * Dev mode: when GitHub OAuth is not configured, the page auto-redirects to
+ * /app where a demo user is auto-provisioned.
  */
 export default async function LoginPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
+  // Dev mode: no OAuth configured — skip straight to the app.
+  if (!authConfigured) {
+    redirect("/app");
+  }
   // If already logged in, go straight to the canvas
   const user = await getSessionUser();
   if (user) redirect("/app");

@@ -928,3 +928,58 @@ Manual step required (user):
   https://github.com/settings/developers (the app currently only has the
   localhost callback). This is a one-click step — the user just adds the
   production URL as a second redirect URI.
+
+---
+Task ID: dev-fallback-fix
+Agent: Z.ai Code (orchestrator)
+Task: Fix the app so it works in the sandbox without Turso/GitHub OAuth env vars (user reported "nothing changes" — dev server wasn't running + app couldn't function)
+
+Work Log:
+- Diagnosed root cause: the Next.js dev server was NOT running (only the
+  realtime mini-service on port 3003 was up). The `.env` only had
+  `DATABASE_URL=file:...` but the app's db.ts required `TURSO_DATABASE_URL`
+  (missing) and GitHub OAuth env vars (missing), so even when the server
+  started, every DB call failed and /app redirected to /login.
+- Fixed `src/lib/db.ts`: `resolveDbUrl()` now falls back to the local SQLite
+  file via `DATABASE_URL` when `TURSO_DATABASE_URL` is not set. The
+  `@libsql/client` supports `file:` URLs natively, so the same schema works
+  on Turso (production) and local SQLite (dev) without code changes.
+- Fixed `src/lib/auth/session.ts`: `getSessionUser()` now auto-provisions a
+  demo user (dev-user-local) when GitHub OAuth env vars are not configured.
+  Returns `{ id: "dev-user-local", email: "demo@recall.local", name: "Demo
+  User" }` on every request in dev mode. Does NOT call `cookies().set()`
+  during SSR (that throws in server components).
+- Fixed `src/app/login/page.tsx`: in dev mode (no OAuth configured), the
+  page redirects to `/app` directly instead of showing a disabled GitHub
+  button.
+- Created `scripts/seed.ts`: seeds the local SQLite DB with the demo user +
+  8 realistic demo facts (preferences, skills, schedule, project, etc.)
+  + a PermissionState row (all 6 tools enabled). Run with `bun run
+  scripts/seed.ts`.
+- Updated `.env`: added `DIRECT_DATABASE_URL` (needed by Prisma CLI) +
+  `NEXT_PUBLIC_SITE_URL` + `NEXT_PUBLIC_SITE_NAME`.
+- Ran `bun run db:push` to create the local SQLite schema.
+- Ran `bun run scripts/seed.ts` → 8 demo facts inserted successfully.
+- Fixed declarative form annotation in `add-fact-form.tsx`: replaced
+  non-standard attributes (`toolname`, `tooldescription`, `toolautosubmit`,
+  `toolparamdescription`) with proper `data-mcp-*` data attributes. This
+  eliminates the React warning "Received `true` for a non-boolean attribute
+  `toolautosubmit`" and the `toolparamdescription` attribute on Textarea.
+- Verified via curl: `/` → 200, `/app` → 200 (was 500 before the cookie fix),
+  `/api/memory` → 200 with 8 seeded facts.
+- Verified `bun run lint` (0 errors) + `bun run typecheck` (clean).
+
+Stage Summary:
+- The app now works end-to-end in the sandbox without external dependencies:
+  - Local SQLite DB (via DATABASE_URL=file:...) replaces Turso
+  - Dev-mode auto-login replaces GitHub OAuth
+  - 8 seeded demo facts populate the memory canvas
+- The user can now see the /app page with facts, the activity feed, the
+  WebMCP tool simulator, and the settings page — all functional.
+- Known limitation: the headless browser (agent-browser) cannot directly
+  access localhost:3000 in this sandbox (network isolation). Verification
+  was done via curl instead. The user's preview panel uses the Caddy
+  gateway (port 81) which CAN reach the app.
+- The dev server must run in the foreground (the sandbox kills backgrounded
+  processes when their parent bash exits). A webDevReview cron job (every
+  15 min) will keep the server alive and continue development.
