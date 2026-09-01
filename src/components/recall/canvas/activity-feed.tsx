@@ -174,8 +174,8 @@ export function ActivityFeed() {
     return [...liveOnly, ...fetched].slice(0, 50);
   }, [data, liveEntries]);
 
-  // Limit the feed to the 15 most recent entries to avoid clutter
-  const displayEntries = allEntries.slice(0, 15);
+  // Limit the feed to the 8 most recent entries to keep the UI clean
+  const displayEntries = allEntries.slice(0, 8);
   const hiddenCount = allEntries.length - displayEntries.length;
 
   return (
@@ -216,7 +216,7 @@ export function ActivityFeed() {
           </p>
         </div>
       ) : (
-        <ScrollArea className="max-h-[400px]">
+        <ScrollArea className="max-h-[320px]">
           <div className="space-y-1.5 pr-1">
             {displayEntries.map((entry) => (
               <AuditEntryRow key={entry.id} entry={entry} />
