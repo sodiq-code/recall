@@ -245,6 +245,17 @@ export async function semanticQueryFacts(
         note: `No exact match for "${trimmedQuery}". Expanded to: ${expandedTerms.slice(0, 5).join(", ")}${expandedTerms.length > 5 ? "…" : ""}`,
       };
     }
+
+    // Expansion returned 0 — include diagnostic info in the note.
+    const geminiKeyPresent = Boolean(process.env.GEMINI_API_KEY);
+    return {
+      facts: [],
+      count: 0,
+      expanded: false,
+      expandedTerms,
+      fallback: false,
+      note: `Stage 2 debug: expanded "${trimmedQuery}" to [${expandedTerms.slice(0, 5).join(", ")}] (${expandedTerms.length} terms), geminiKey=${geminiKeyPresent}, but 0 facts matched.`,
+    };
   }
 
   // Stage 3: recent-facts fallback.
