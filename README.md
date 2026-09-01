@@ -76,12 +76,18 @@ That demonstrates something more powerful than six tools: **agent capability
 
 ## What makes Recall different
 
+> **Screenshots:** drop the four images below into `docs/screenshots/` and
+> they'll render automatically. A judge scanning GitHub should understand
+> the product in ~30 seconds.
+
 ### 1. Memory Insights — a real product, not a protocol demo
 
 Recall renders a dashboard that visualizes your memory vault at a glance:
 total facts, source breakdown (you vs agent), top tags, a 7-day activity
 sparkline, and per-tool call distribution. This is the same data ChatGPT
 sees — just made visible to the human who owns it.
+
+<!-- ![Memory Insights dashboard](docs/screenshots/insights.png) -->
 
 ### 2. Search that never fails silently
 
@@ -102,6 +108,17 @@ tool call → signed event (ECDSA P-256) → immutable audit record
 The audit log is the receipt you check ChatGPT's claims against. Export it
 from `/app/settings` and verify the signature with the included public key —
 no trust in the database required.
+
+<!-- ![Signed audit log + export](docs/screenshots/audit.png) -->
+
+### 4. User governance — the killer interaction
+
+Disable any tool in Settings. The capability token's scope is instantly
+narrowed — the agent cannot call a tool the user has disabled. Re-enable it
+to restore access. This is WebMCP as **user governance over agent
+capability**, not just "AI controlling a website."
+
+<!-- ![Permission revocation — agent blocked](docs/screenshots/governance.png) -->
 
 ## The six WebMCP tools
 
@@ -339,11 +356,13 @@ mini-services/
   fan-out, per-tool permissions with live capability-token scoping, signed
   audit export as JWS, and a settings page — all in one repo, deployed and
   live.
-- **Potential Impact** — every ChatGPT Plus/Pro/Team user (~100M+ MAU) is a
-  target user; opaque AI memory is a 2026 trust crisis (EU AI Act Article 22
-  requires auditability). Recall's inversion — the website as the memory
-  boundary, not the agent platform — is the reference architecture for
-  user-controlled agent memory on the web.
+- **Potential Impact** — ChatGPT users are the initial target market, but
+  the broader opportunity is every conversational AI agent that needs
+  persistent, user-trusted memory. As AI agents take more autonomous
+  actions, regulators are moving toward auditability requirements (e.g. the
+  EU AI Act's transparency obligations for high-risk AI systems). Recall's
+  inversion — the website as the memory boundary, not the agent platform —
+  is a reference architecture for user-controlled agent memory on the web.
 - **Creativity & Ambition** — the architectural inversion (website as
   subject, agent as client) is a category anchor competitors are unlikely to
   replicate in the build window. The killer interaction — user disables a
