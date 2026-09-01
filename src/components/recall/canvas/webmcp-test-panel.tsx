@@ -74,8 +74,8 @@ const TOOL_ICONS: Record<ToolName, React.ComponentType<{ className?: string }>> 
 const TOOL_EXAMPLES: Record<ToolName, Record<string, unknown>> = {
   query: { query: "hobbies" },
   addFact: { content: "Prefers async communication over meetings.", tags: ["work"] },
-  updateFact: { factId: "<paste a fact ID>", content: "Updated fact text." },
-  forgetFact: { factId: "<paste a fact ID>" },
+  updateFact: { factId: "", content: "Updated fact text." },
+  forgetFact: { factId: "" },
   summarize: {},
   timeline: { limit: 10 },
 };
@@ -89,10 +89,30 @@ export function WebMCPTestPanel() {
   const [result, setResult] = React.useState<CallResult | null>(null);
   const [isRunning, setIsRunning] = React.useState(false);
   const [parseError, setParseError] = React.useState<string | null>(null);
+  const [factIds, setFactIds] = React.useState<string[]>([]);
+
+  // Fetch fact IDs when the panel is expanded (for updateFact/forgetFact)
+  React.useEffect(() => {
+    if (!expanded) return;
+    fetch("/api/memory?limit=50")
+      .then((res) => res.json())
+      .then((data) => {
+        const ids = (data.facts ?? []).map((f: { id: string }) => f.id);
+        setFactIds(ids);
+      })
+      .catch(() => {});
+  }, [expanded]);
 
   function selectTool(name: ToolName) {
     setActiveTool(name);
-    setArgsText(JSON.stringify(TOOL_EXAMPLES[name], null, 2));
+    // For updateFact and forgetFact, use a real fact ID if available
+    if ((name === "updateFact" || name === "forgetFact") && factIds.length > 0) {
+      const example = { ...TOOL_EXAMPLES[name] };
+      example.factId = factIds[0];
+      setArgsText(JSON.stringify(example, null, 2));
+    } else {
+      setArgsText(JSON.stringify(TOOL_EXAMPLES[name], null, 2));
+    }
     setResult(null);
     setParseError(null);
   }
