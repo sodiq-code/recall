@@ -1,25 +1,35 @@
 # Recall
 
-> **Your AI, your memory, your rules.**
->
-> The first transparent, controllable memory layer for your ChatGPT agent —
-> built natively on [WebMCP](https://webmcp.devpost.com/).
+> **Instead of giving an agent access to your memory, Recall gives your
+> memory a controlled interface the agent must use.**
 
-Recall is a hosted website where ChatGPT's memory of you lives — and you can
-see, edit, and audit it. ChatGPT's memory is a black box; Recall is the
-website that fixes it. Your AI's memory of you is fully visible, fully
-editable, fully audited — and only your ChatGPT agent can read or write it,
-via WebMCP.
+Recall is a user-controlled memory layer for AI agents, implemented as a
+[WebMCP](https://webmcp.devpost.com/) website. Your AI's memory of you lives
+in a website you can inspect, edit, and revoke — not in a hidden database
+controlled by the platform.
 
 Built for [The WebMCP Challenge](https://webmcp.devpost.com/) (OpenAI / Devpost).
 
+**Live:** [recall-app-one.vercel.app](https://recall-app-one.vercel.app)
+
 ---
 
-## The inversion (the one idea)
+## The problem
 
-Had the **agent as the subject** — the agent calls
-servers. Recall takes WebMCP's spec topology seriously and ships the
-**inversion** as the product:
+AI agents need persistent memory. But today, agent memory is **opaque and
+platform-controlled**. You cannot see what ChatGPT knows about you, cannot
+edit individual facts, cannot audit when memory was used, and cannot
+selectively forget. There is no API, no audit log, and no way to verify which
+memory was used in a given response.
+
+## The insight
+
+**Make memory a website.**
+
+Recall takes WebMCP's spec topology seriously and ships the **inversion** as
+the product. Every prior MCP app had the agent as the subject — the agent
+calls servers. Recall makes the **website the subject** and the **agent the
+consumer**:
 
 | | Prior MCP apps | Recall |
 | --- | --- | --- |
@@ -27,29 +37,80 @@ servers. Recall takes WebMCP's spec topology seriously and ships the
 | **Client** | A server | ChatGPT |
 | **Tool surface** | Lives on a server | Lives at a TLS origin |
 | **Trust boundary** | The network | The browser |
+| **Who owns the memory** | The agent platform | **The user** |
 
 The website **is** the memory. The agent **is** the consumer. The browser is
 the trust boundary. The capability token is the credential. The audit log is
-the receipt.
+the receipt. The user remains in control of every capability.
 
-The six tools are the surface area; the inversion is the value.
+## See WebMCP actually working
 
-## The problem
+The full agent ↔ website relationship, end-to-end:
 
-ChatGPT's memory is opaque. You cannot see what it knows, cannot edit
-individual facts, cannot audit when memory was used, and cannot selectively
-forget. There is no API, no audit log, and no way to verify which memory was
-used in a given response. Recall fixes all four.
+1. **Open Recall** in the ChatGPT in-app browser (or Chrome 149+ with the
+   `chrome://flags/#enable-webmcp-testing` flag).
+2. **Sign in** with GitHub OAuth.
+3. **ChatGPT discovers six tools** Recall registered via
+   `document.modelContext.registerTool()`.
+4. **Ask ChatGPT** to remember something — e.g. *"Remember that I prefer
+   TypeScript."*
+5. **Watch Recall update live** — the new fact appears in your memory canvas
+   in real time via WebSocket.
+6. **Inspect the signed audit event** — every tool call is appended to an
+   immutable, ECDSA-signed audit log.
+7. **Disable the `addFact` tool** in Settings → the capability token's scope
+   is instantly narrowed.
+8. **Ask ChatGPT to remember again** → **blocked.** The agent cannot call a
+   tool the user has disabled. Re-enable it to restore access.
+
+That demonstrates something more powerful than six tools: **agent capability
++ user governance.**
+
+> **Try it without ChatGPT.** The interactive
+> [Tool Playground](https://recall-app-one.vercel.app/playground) (`/playground`)
+> and the in-app **Agent tool-call simulator** (on `/app`) let you call each
+> of the six tools against your real memory vault — the same response shape
+> ChatGPT would receive, with the same audit-trail provenance. The
+> [`/webmcp-test`](https://recall-app-one.vercel.app/webmcp-test) page shows
+> the raw tool registration diagnostics.
+
+## What makes Recall different
+
+### 1. Memory Insights — a real product, not a protocol demo
+
+Recall renders a dashboard that visualizes your memory vault at a glance:
+total facts, source breakdown (you vs agent), top tags, a 7-day activity
+sparkline, and per-tool call distribution. This is the same data ChatGPT
+sees — just made visible to the human who owns it.
+
+### 2. Search that never fails silently
+
+The `query` tool searches both fact content **and** tags (OR condition). When
+there's no match, Recall falls back to your most recent facts with a clear
+note — *"No facts match 'hobbies'. Showing your 5 most recent facts."* The
+agent never gets a mysterious empty state.
+
+### 3. Cryptographically verifiable audit
+
+Every agent action leaves signed evidence. The flow:
+
+```
+tool call → signed event (ECDSA P-256) → immutable audit record
+         → exportable as JWS bundle → independently verifiable without the database
+```
+
+The audit log is the receipt you check ChatGPT's claims against. Export it
+from `/app/settings` and verify the signature with the included public key —
+no trust in the database required.
 
 ## The six WebMCP tools
 
 Recall registers six tools via `document.modelContext.registerTool()` when a
-signed-in user opens the app in a WebMCP-capable browser (the ChatGPT in-app
-browser, or Chrome 149+ with the `chrome://flags/#enable-webmcp-testing` flag).
+signed-in user opens the app in a WebMCP-capable browser.
 
 | Tool | Purpose | Read-only | Untrusted content |
 | --- | --- | :---: | :---: |
-| `query` | Retrieve facts matching a natural-language query | ✓ | |
+| `query` | Retrieve facts matching a natural-language query + tag search | ✓ | |
 | `addFact` | Add a new fact to the user's memory | | ✓ |
 | `updateFact` | Update an existing fact's content or tags | | ✓ |
 | `forgetFact` | Soft-delete a fact (reversible from the audit log) | | |
@@ -58,26 +119,6 @@ browser, or Chrome 149+ with the `chrome://flags/#enable-webmcp-testing` flag).
 
 Each tool carries the spec's `readOnlyHint` / `untrustedContentHint`
 annotations so the agent knows how it may use it.
-
-## How it works
-
-1. **Sign in once.** Authenticate at Recall. GitHub OAuth stands in for
-   ChatGPT OAuth on subsequent release; the production plan swaps in ChatGPT OAuth when
-   it ships to third parties.
-2. **See your memory.** Recall renders your facts as a canvas of editable,
-   taggable cards. Add, edit, or forget any fact directly — nothing is hidden.
-3. **Ask ChatGPT anything.** Open ChatGPT in its in-app browser. ChatGPT
-   calls `recall(query=…)`, `addFact(…)`, or `forgetFact(…)` through the
-   WebMCP tools Recall registered.
-4. **Audit every call.** Every tool call appears in your activity feed in
-   real time, signed and reversible. Export the whole log as a verifiable
-   JSON bundle.
-
-> **Try it without ChatGPT.** The interactive
-> [Tool Playground](https://recall.app/playground) (`/playground`) lets you
-> call each of the six tools against an in-memory demo vault — the same
-> response shape ChatGPT would receive, with the same audit-trail provenance.
-> No sign-in required.
 
 ## Architecture
 
@@ -290,19 +331,25 @@ mini-services/
   browser-mediated session, audit-log integration, capability-token
   authentication, and declarative form annotation (the add-fact form is both
   an HTML form and a WebMCP tool via the `data-mcp-tool` attribute). The
-  interactive `/playground` lets judges explore the full tool surface
-  hands-on without ChatGPT or a sign-in.
+  interactive `/playground` and the in-app Agent tool-call simulator let
+  judges explore the full tool surface hands-on without ChatGPT.
 - **Execution** — a complete, coherent product experience, not a technical
-  proof of concept: sign-up, memory canvas with CRUD + search + tags,
-  real-time activity feed with WebSocket fan-out, per-tool permissions,
-  capability tokens, signed audit export, and a settings page — all in one
-  repo.
+  proof of concept: sign-up, memory canvas with CRUD + tag search + smart
+  fallback, Memory Insights dashboard, real-time activity feed with WebSocket
+  fan-out, per-tool permissions with live capability-token scoping, signed
+  audit export as JWS, and a settings page — all in one repo, deployed and
+  live.
 - **Potential Impact** — every ChatGPT Plus/Pro/Team user (~100M+ MAU) is a
   target user; opaque AI memory is a 2026 trust crisis (EU AI Act Article 22
-  requires auditability).
+  requires auditability). Recall's inversion — the website as the memory
+  boundary, not the agent platform — is the reference architecture for
+  user-controlled agent memory on the web.
 - **Creativity & Ambition** — the architectural inversion (website as
   subject, agent as client) is a category anchor competitors are unlikely to
-  replicate in the build window.
+  replicate in the build window. The killer interaction — user disables a
+  tool in Settings and the agent is immediately blocked from calling it —
+  demonstrates WebMCP as **user governance over agent capability**, not just
+  "AI controlling a website."
 
 ## License
 
