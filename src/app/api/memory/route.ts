@@ -76,7 +76,7 @@ export async function POST(request: Request) {
       userId: auth.user.id,
       callerOrigin: "recall.app",
       toolName: "addFact",
-      args: { content: fact.content, tags: fact.tags },
+      args: { content: fact.content, tags: fact.tags, factId: fact.id },
       result: { id: fact.id },
       resultCount: 1,
     });
