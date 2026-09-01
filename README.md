@@ -1,5 +1,14 @@
 # Recall
 
+[![Live Demo](https://img.shields.io/badge/live-recall--app--one.vercel.app-success?style=flat-square)](https://recall-app-one.vercel.app)
+[![Next.js 16](https://img.shields.io/badge/Next.js_16-000000?style=flat-square&logo=nextdotjs&logoColor=white)](https://nextjs.org)
+[![WebMCP](https://img.shields.io/badge/WebMCP-6A4C93?style=flat-square)](https://webmcp.devpost.com)
+[![TypeScript](https://img.shields.io/badge/TypeScript_5-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS_4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+[![Turso](https://img.shields.io/badge/Turso-libSQL-0099CC?style=flat-square)](https://turso.tech)
+[![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat-square&logo=vercel&logoColor=white)](https://vercel.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-6C63FF?style=flat-square)](./LICENSE)
+
 > **Instead of giving an agent access to your memory, Recall gives your
 > memory a controlled interface the agent must use.**
 
@@ -76,18 +85,12 @@ That demonstrates something more powerful than six tools: **agent capability
 
 ## What makes Recall different
 
-> **Screenshots:** drop the four images below into `docs/screenshots/` and
-> they'll render automatically. A judge scanning GitHub should understand
-> the product in ~30 seconds.
-
 ### 1. Memory Insights — a real product, not a protocol demo
 
 Recall renders a dashboard that visualizes your memory vault at a glance:
 total facts, source breakdown (you vs agent), top tags, a 7-day activity
 sparkline, and per-tool call distribution. This is the same data ChatGPT
 sees — just made visible to the human who owns it.
-
-<!-- ![Memory Insights dashboard](docs/screenshots/insights.png) -->
 
 ### 2. Search that never fails silently
 
@@ -109,16 +112,12 @@ The audit log is the receipt you check ChatGPT's claims against. Export it
 from `/app/settings` and verify the signature with the included public key —
 no trust in the database required.
 
-<!-- ![Signed audit log + export](docs/screenshots/audit.png) -->
-
 ### 4. User governance — the killer interaction
 
 Disable any tool in Settings. The capability token's scope is instantly
 narrowed — the agent cannot call a tool the user has disabled. Re-enable it
 to restore access. This is WebMCP as **user governance over agent
 capability**, not just "AI controlling a website."
-
-<!-- ![Permission revocation — agent blocked](docs/screenshots/governance.png) -->
 
 ## The six WebMCP tools
 
@@ -331,13 +330,7 @@ mini-services/
   ci.yml                 # lint + typecheck + build on every push/PR
 ```
 
-## The WebMCP Challenge
-
-- **Challenge:** [The WebMCP Challenge](https://webmcp.devpost.com/)
-- **Rules:** [webmcp.devpost.com/rules](https://webmcp.devpost.com/rules)
-- **Resources:** [webmcp.devpost.com/resources](https://webmcp.devpost.com/resources)
-- **Submission deadline:** Sep 3, 2026, 1:00pm PT
-- **Judging:** WebMCP Leverage / Execution / Potential Impact / Creativity & Ambition
+## How Recall maps to the judging criteria
 
 ### What this project demonstrates
 
