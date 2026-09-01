@@ -1,17 +1,16 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { authConfigured } from "@/lib/env";
 import { Reveal } from "./motion-primitives";
 
 /**
  * Recall — closing CTA band.
  *
- * The last thing a reader sees before the footer. Mirrors the hero CTA so a
- * scroll-to-bottom reader still lands on a clear action.
+ * Session-aware: shows "Go to canvas" when logged in, "Connect ChatGPT" when logged out.
  */
-export function CtaBand() {
-  const ctaHref = authConfigured ? "/login" : "https://github.com/sodiq-code/recall";
+export function CtaBand({ loggedIn = false }: { loggedIn?: boolean }) {
+  const ctaHref = loggedIn ? "/app" : "/login";
+  const ctaLabel = loggedIn ? "Go to canvas" : "Connect ChatGPT";
   return (
     <section className="border-t border-border/60 bg-muted/30">
       <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
@@ -36,7 +35,7 @@ export function CtaBand() {
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <Button size="lg" asChild>
                   <Link href={ctaHref}>
-                    Connect ChatGPT
+                    {ctaLabel}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>

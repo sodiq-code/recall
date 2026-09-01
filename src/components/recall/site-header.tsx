@@ -1,22 +1,20 @@
 import Link from "next/link";
-import { Github, BookOpen, PlayCircle } from "lucide-react";
+import { Github, BookOpen, PlayCircle, LogOut, User } from "lucide-react";
 import { RecallMark } from "./recall-mark";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
-import { authConfigured } from "@/lib/env";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getSessionUser } from "@/lib/auth/session";
 
 /**
  * Recall — site header.
  *
- * Anchored at the top of every public page. The header is intentionally quiet
- * so the hero owns the first impression; it carries the mark, a single
- * primary nav link (Docs), the theme toggle, the repo link, and the Connect
- * CTA. The CTA's destination flips to /login once GitHub OAuth is configured
- * ; until then it points at the repo so it is never a dead
- * end.
+ * Session-aware: shows "Connect ChatGPT" (→ /login) when signed out,
+ * and the user's avatar + "Sign out" when signed in. The CTA flips
+ * based on the session state.
  */
-export function SiteHeader() {
-  const ctaHref = authConfigured ? "/login" : "https://github.com/sodiq-code/recall";
+export async function SiteHeader() {
+  const user = await getSessionUser();
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/65">
@@ -63,7 +61,7 @@ export function SiteHeader() {
               target="_blank"
               rel="noreferrer"
             >
-              <span>WebMCP Challenge</span>
+              <span>WebMCP</span>
             </a>
           </Button>
           <Button
@@ -82,12 +80,38 @@ export function SiteHeader() {
             </a>
           </Button>
           <ThemeToggle />
-          <Button size="sm" asChild className="ml-1">
-            <Link href={ctaHref}>
-              <span className="sm:hidden">Connect</span>
-              <span className="hidden sm:inline">Connect ChatGPT</span>
-            </Link>
-          </Button>
+
+          {user ? (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                asChild
+                className="ml-1 gap-2"
+              >
+                <Link href="/app">
+                  <Avatar className="h-6 w-6">
+                    {user.avatarUrl && (
+                      <AvatarImage src={user.avatarUrl} alt={user.name ?? user.email} />
+                    )}
+                    <AvatarFallback className="bg-primary/10 text-xs text-primary">
+                      {(user.name ?? user.email)[0]?.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="hidden max-w-[120px] truncate sm:inline">
+                    {user.name ?? user.email.split("@")[0]}
+                  </span>
+                </Link>
+              </Button>
+            </>
+          ) : (
+            <Button size="sm" asChild className="ml-1">
+              <Link href="/login">
+                <span className="sm:hidden">Connect</span>
+                <span className="hidden sm:inline">Connect ChatGPT</span>
+              </Link>
+            </Button>
+          )}
         </nav>
       </div>
     </header>

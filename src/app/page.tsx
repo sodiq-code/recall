@@ -8,34 +8,31 @@ import { TryTheTools } from "@/components/recall/landing/try-the-tools";
 import { HowItWorks } from "@/components/recall/landing/how-it-works";
 import { Stack } from "@/components/recall/landing/stack";
 import { CtaBand } from "@/components/recall/landing/cta-band";
+import { getSessionUser } from "@/lib/auth/session";
 
 /**
  * Recall — landing page (/).
  *
- * The public face of the project. Composes the hero (the inversion + the
- * audit-feed "wow moment"), the problem framing, the core innovation, the
- * six-tool surface, the four-step journey, the stack, and a closing CTA. The
- * wrapper uses min-h-screen + flex-col with the footer pinned via mt-auto so
- * the footer sticks on short viewports and pushes down on long ones.
- *
- * The landing page is part of the
- * scaffold definition-of-done. This is intentionally more than "hello world"
- * — the landing page is the repo's first impression for judges, so it ships
- * polished from the first commit.
+ * Session-aware: passes the `loggedIn` prop to the Hero and CtaBand
+ * components so the CTA shows "Go to canvas" when the user is signed in
+ * and "Connect ChatGPT" when they're signed out.
  */
-export default function LandingPage() {
+export default async function LandingPage() {
+  const user = await getSessionUser();
+  const loggedIn = Boolean(user);
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <SiteHeader />
       <main className="flex-1">
-        <Hero />
+        <Hero loggedIn={loggedIn} />
         <Problem />
         <Inversion />
         <ToolsGrid />
         <TryTheTools />
         <HowItWorks />
         <Stack />
-        <CtaBand />
+        <CtaBand loggedIn={loggedIn} />
       </main>
       <SiteFooter />
     </div>

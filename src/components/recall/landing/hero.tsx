@@ -2,7 +2,6 @@ import Link from "next/link";
 import { ArrowRight, ShieldCheck, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { authConfigured } from "@/lib/env";
 import { AuditFeedPreview } from "./audit-feed-preview";
 import { Reveal } from "./motion-primitives";
 
@@ -23,8 +22,9 @@ import { Reveal } from "./motion-primitives";
  *   - The headline + lede + CTA stack fade-up on enter via <Reveal> with a
  *     small stagger so the hero assembles in one calm beat.
  */
-export function Hero() {
-  const ctaHref = authConfigured ? "/login" : "https://github.com/sodiq-code/recall";
+export function Hero({ loggedIn = false }: { loggedIn?: boolean }) {
+  const ctaHref = loggedIn ? "/app" : "/login";
+  const ctaLabel = loggedIn ? "Go to canvas" : "Connect ChatGPT";
 
   return (
     <section className="relative overflow-hidden">
@@ -74,7 +74,7 @@ export function Hero() {
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Button size="lg" asChild>
                 <Link href={ctaHref}>
-                  Connect ChatGPT
+                  {ctaLabel}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>

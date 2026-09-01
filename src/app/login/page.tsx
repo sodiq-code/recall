@@ -1,10 +1,11 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Github, ArrowLeft, ShieldCheck, AlertCircle } from "lucide-react";
 import { SiteHeader } from "@/components/recall/site-header";
 import { SiteFooter } from "@/components/recall/site-footer";
 import { RecallMark } from "@/components/recall/recall-mark";
 import { Button } from "@/components/ui/button";
-import { authConfigured } from "@/lib/env";
+import { getSessionUser } from "@/lib/auth/session";
 
 /**
  * Recall — /login.
@@ -21,11 +22,15 @@ import { authConfigured } from "@/lib/env";
  * friendly message explaining the failure. This is a server component so we
  * read the search params from the URL.
  */
-export default function LoginPage({
+export default async function LoginPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
+  // If already logged in, go straight to the canvas
+  const user = await getSessionUser();
+  if (user) redirect("/app");
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <SiteHeader />
@@ -59,26 +64,11 @@ export default function LoginPage({
                   type="submit"
                   size="lg"
                   className="w-full"
-                  disabled={!authConfigured}
                 >
                   <Github className="mr-2 h-5 w-5" />
                   Continue with GitHub
                 </Button>
               </form>
-
-              {!authConfigured && (
-                <p className="mt-3 text-xs text-amber-600 dark:text-amber-400">
-                  GitHub OAuth is not configured. Set{" "}
-                  <code className="rounded bg-muted px-1 py-0.5 font-mono">
-                    GITHUB_CLIENT_ID
-                  </code>{" "}
-                  and{" "}
-                  <code className="rounded bg-muted px-1 py-0.5 font-mono">
-                    GITHUB_CLIENT_SECRET
-                  </code>{" "}
-                  in .env.
-                </p>
-              )}
 
               <ErrorBanner searchParams={searchParams} />
 
