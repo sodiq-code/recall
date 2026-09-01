@@ -45,18 +45,35 @@ export interface SemanticQueryResult {
 }
 
 /**
- * Expand a search query into related terms using the LLM.
+ * Expand a search query into related terms using an LLM.
  *
  * "hobbies" → ["hobbies", "hobby", "interests", "pastimes", "activities",
  *   "climbing", "sports", "games", "reading", "music"]
  *
  * Returns the original query + up to 12 expanded terms. Falls back to just
- * the original query if the LLM call fails.
+ * the original query if both LLM providers fail.
+ *
+ * Provider priority:
+ *   1. Google Gemini API (if GEMINI_API_KEY is set — works on Vercel)
+ *   2. z-ai-web-dev-sdk (sandbox environment via /etc/.z-ai-config)
+ *   3. Original query only (graceful degradation)
  */
 export async function expandQuery(query: string): Promise<string[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
 
+  // Try Gemini API first (production on Vercel).
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (geminiKey) {
+    try {
+      const terms = await expandWithGemini(trimmed, geminiKey);
+      if (terms.length > 0) return terms;
+    } catch {
+      // Fall through to z-ai SDK.
+    }
+  }
+
+  // Try z-ai-web-dev-sdk (sandbox).
   try {
     const zai = await ZAI.create();
     const completion = await zai.chat.completions.create({
@@ -82,11 +99,60 @@ export async function expandQuery(query: string): Promise<string[]> {
     });
 
     const content = completion.choices[0]?.message?.content?.trim() ?? "";
-    // Extract the JSON array from the response (the LLM sometimes wraps in
-    // markdown code fences).
-    const jsonMatch = content.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) return [trimmed.toLowerCase()];
+    return parseTermsFromResponse(content, trimmed);
+  } catch {
+    // Both providers failed — return just the original query.
+    return [trimmed.toLowerCase()];
+  }
+}
 
+/**
+ * Call the Google Gemini API directly to expand the query.
+ * Uses gemini-2.0-flash for speed. Works on Vercel with GEMINI_API_KEY.
+ */
+async function expandWithGemini(query: string, apiKey: string): Promise<string[]> {
+  const prompt =
+    "You are a search query expansion engine for a personal memory vault. " +
+    "Given a search query, return a JSON array of related terms and synonyms " +
+    "that might appear in stored facts. Include the original word, synonyms, " +
+    "and concrete examples of things that match the category. " +
+    "Return ONLY a JSON array of lowercase strings, no explanation. " +
+    "Max 12 terms. Example: input \"hobbies\" → " +
+    "[\"hobbies\",\"hobby\",\"interests\",\"pastimes\",\"activities\"," +
+    "\"climbing\",\"sports\",\"games\",\"reading\",\"music\",\"coding\",\"art\"]\n\n" +
+    `Expand: "${query}"`;
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 200 },
+      }),
+    },
+  );
+
+  if (!res.ok) {
+    throw new Error(`Gemini API error: ${res.status}`);
+  }
+
+  const data = (await res.json()) as {
+    candidates?: { content?: { parts?: { text?: string }[] } }[];
+  };
+  const content = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
+  return parseTermsFromResponse(content, query);
+}
+
+/** Extract a JSON array of terms from an LLM response. */
+function parseTermsFromResponse(content: string, originalQuery: string): string[] {
+  // Extract the JSON array from the response (the LLM sometimes wraps in
+  // markdown code fences).
+  const jsonMatch = content.match(/\[[\s\S]*\]/);
+  if (!jsonMatch) return [originalQuery.toLowerCase()];
+
+  try {
     const terms = JSON.parse(jsonMatch[0]) as string[];
     const cleaned = terms
       .map((t) => String(t).toLowerCase().trim())
@@ -94,13 +160,12 @@ export async function expandQuery(query: string): Promise<string[]> {
       .slice(0, 12);
 
     // Always include the original query.
-    if (!cleaned.includes(trimmed.toLowerCase())) {
-      cleaned.unshift(trimmed.toLowerCase());
+    if (!cleaned.includes(originalQuery.toLowerCase())) {
+      cleaned.unshift(originalQuery.toLowerCase());
     }
     return cleaned;
   } catch {
-    // LLM call failed — fall back to just the original query.
-    return [trimmed.toLowerCase()];
+    return [originalQuery.toLowerCase()];
   }
 }
 
