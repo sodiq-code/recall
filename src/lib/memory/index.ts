@@ -155,6 +155,8 @@ interface FactRow {
   deletedAt: string | null;
 }
 
+export type { FactRow };
+
 function parseDate(value: unknown): number {
   if (value instanceof Date) return value.getTime();
   if (typeof value === "number") return value;
@@ -169,7 +171,7 @@ function parseDate(value: unknown): number {
   return Date.now();
 }
 
-function mapFact(row: FactRow, tags: string[]): Fact {
+export function mapFact(row: FactRow, tags: string[]): Fact {
   return {
     id: row.id,
     content: row.content,
@@ -195,7 +197,7 @@ async function fetchTagsForFact(factId: string): Promise<string[]> {
   return result.rows.map((r) => (r as unknown as { tag: string }).tag);
 }
 
-async function fetchTagsForFacts(
+export async function fetchTagsForFacts(
   factIds: string[],
 ): Promise<Map<string, string[]>> {
   if (factIds.length === 0) return new Map();
@@ -370,24 +372,32 @@ export async function queryFacts(
   const query = options.query.toLowerCase().trim();
   const tags = options.tags ?? [];
 
-  // Start with all non-deleted facts for the user.
-  let sql = `SELECT id, content, source, sourceOrigin, capabilityTokenId, relevanceScore, createdAt, updatedAt, deletedAt FROM Fact WHERE userId = ? AND deletedAt IS NULL`;
+  // Start with all non-deleted facts for the user. When a query string is
+  // present, LEFT JOIN FactTag so we can match content OR tag substring.
+  let sql = `SELECT DISTINCT f.id, f.content, f.source, f.sourceOrigin, f.capabilityTokenId, f.relevanceScore, f.createdAt, f.updatedAt, f.deletedAt
+             FROM Fact f`;
   const args: InArgs = [userId];
+
+  if (query) {
+    sql += ` LEFT JOIN FactTag ft ON ft.factId = f.id`;
+  }
+  sql += ` WHERE f.userId = ? AND f.deletedAt IS NULL`;
 
   // Tag filter: all provided tags must be present.
   if (tags.length > 0) {
     const placeholders = tags.map(() => "?").join(",");
-    sql += ` AND id IN (SELECT factId FROM FactTag WHERE tag IN (${placeholders}) GROUP BY factId HAVING COUNT(DISTINCT tag) = ?)`;
+    sql += ` AND f.id IN (SELECT factId FROM FactTag WHERE tag IN (${placeholders}) GROUP BY factId HAVING COUNT(DISTINCT tag) = ?)`;
     args.push(...tags, tags.length);
   }
 
-  // Content filter: substring match (case-insensitive via LOWER()).
+  // Content OR tag substring match (case-insensitive). Querying "preferences"
+  // now matches both facts containing the word AND facts tagged #preferences.
   if (query) {
-    sql += ` AND LOWER(content) LIKE ?`;
-    args.push(`%${query}%`);
+    sql += ` AND (LOWER(f.content) LIKE ? OR LOWER(ft.tag) LIKE ?)`;
+    args.push(`%${query}%`, `%${query}%`);
   }
 
-  sql += ` ORDER BY relevanceScore DESC, updatedAt DESC LIMIT ?`;
+  sql += ` ORDER BY f.relevanceScore DESC, f.updatedAt DESC LIMIT ?`;
   args.push(limit);
 
   const result = await db.execute({ sql, args });
