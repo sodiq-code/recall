@@ -1,0 +1,71 @@
+=== FINAL VERIFICATION ===
+
+Based on the provided frames, here are the detailed answers:
+
+=== Frame 1 (t=12.0s) ===
+**Q1.** The exact text inside the "CALL ARGS (JSON)" input field is:
+```json
+{
+  "query": "hobbies"
+}
+```
+**Q2.** Yes, the text `"hobbies"` is highlighted/selected with a blue background.
+**Q3.** Yes, the input box has a white focus border around it.
+**Q4.** There is no button or small grey text visible in this frame yet.
+
+=== Frame 2 (t=14.0s) ===
+**Q1.** The exact text inside the "CALL ARGS (JSON)" input field is:
+```json
+{
+  "query": "like"
+}
+```
+**Q2.** No text is highlighted, but there is a text cursor visible at the end of the word "like".
+**Q3.** No, the white focus border has disappeared from the input field.
+**Q4.** The exact text in small grey font next to the button is: `as chatgpt.com → recall.app`
+
+=== Frame 3 (t=17.5s) ===
+**Q1.** The exact response-time value shown on the right of the RESPONSE header is **661ms**.
+**Q2.** The exact text on the button is **Call query()**.
+**Q3.** Yes, the JSON response body has started rendering. Visible text includes:
+```
+{
+  "facts": [
+```
+**Q4.** The exact text in small grey font next to the button is: `as chatgpt.com → recall.app`
+
+=== Frame 4 (t=18.0s) ===
+**Q1.** The exact response-time value shown is **661ms**.
+**Q2.** The exact text on the button is **Call query()**.
+**Q3.** The COMPLETE JSON response body visible on screen is:
+```json
+{
+  "facts": [
+    {
+      "id": "f1ab28da-1060-4cd6-814f-45c4665930e4",
+      "content": "I like rock climbing.",
+      "tags": [
+        "work"
+      ],
+      "source": "user",
+      "sourceOrigin": "recall.app",
+      "capabilityTokenId": null,
+```
+*(Note: The response continues off-screen or is cut off after this point)*
+
+**Q4.** The exact text in small grey font next to the button is: `as chatgpt.com → recall.app`
+
+***
+
+### CRITICAL QUESTIONS:
+**A. Is the response time "661ms" or "681ms"?**
+The response time is **661ms**. Looking closely at the digit between '6' and '1', it is clearly a '6'.
+
+**B. How many facts are in the returned JSON response? List each fact's "content" field.**
+There is **1 fact** fully visible in the returned JSON response so far.
+*   Fact 1 content: **"I like rock climbing."**
+
+**C. What was the user's exact query string at t=12s vs t=14s? Did they type "like" or "11ke" or both?**
+*   At **t=12s**, the query string inside the JSON was **`"hobbies"`**.
+*   At **t=14s**, the user had changed it to **`"like"`**.
+*   They typed **"like"**, not "11ke".
