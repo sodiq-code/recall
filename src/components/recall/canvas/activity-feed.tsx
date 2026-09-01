@@ -356,7 +356,7 @@ function RollbackButton({
     <Button
       variant="ghost"
       size="sm"
-      className="h-4 gap-0.5 px-1 text-[9px] text-muted-foreground opacity-0 hover:text-foreground group-hover:opacity-100"
+      className="h-5 gap-1 px-1.5 text-[10px] text-muted-foreground hover:text-destructive hover:bg-destructive/5"
       onClick={handleRollback}
       disabled={isRollingBack}
       title={
@@ -365,7 +365,7 @@ function RollbackButton({
           : "Restore the fact that was forgotten"
       }
     >
-      <RotateCcw className="h-2.5 w-2.5" />
+      <RotateCcw className="h-3 w-3" />
       {isRollingBack ? "rolling back…" : "rollback"}
     </Button>
   );
