@@ -155,8 +155,6 @@ interface FactRow {
   deletedAt: string | null;
 }
 
-export type { FactRow };
-
 function parseDate(value: unknown): number {
   if (value instanceof Date) return value.getTime();
   if (typeof value === "number") return value;
@@ -171,7 +169,7 @@ function parseDate(value: unknown): number {
   return Date.now();
 }
 
-export function mapFact(row: FactRow, tags: string[]): Fact {
+function mapFact(row: FactRow, tags: string[]): Fact {
   return {
     id: row.id,
     content: row.content,
@@ -197,7 +195,7 @@ async function fetchTagsForFact(factId: string): Promise<string[]> {
   return result.rows.map((r) => (r as unknown as { tag: string }).tag);
 }
 
-export async function fetchTagsForFacts(
+async function fetchTagsForFacts(
   factIds: string[],
 ): Promise<Map<string, string[]>> {
   if (factIds.length === 0) return new Map();

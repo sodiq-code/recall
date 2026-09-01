@@ -368,52 +368,27 @@ export function WebMCPTestPanel() {
 }
 
 /**
- * Semantic search info banner.
+ * Search info banner.
  *
- * Shows when the query tool used LLM query expansion (stage 2) or the
- * recent-facts fallback (stage 3), so the user understands why the results
- * may not literally contain their search term.
+ * Shows when the query tool used the recent-facts fallback (stage 2), so
+ * the user understands why the results may not literally contain their
+ * search term.
  */
 function SemanticSearchBanner({ result }: { result: Record<string, unknown> }) {
-  const expanded = result.expanded as boolean | undefined;
   const fallback = result.fallback as boolean | undefined;
   const note = result.note as string | undefined;
-  const expandedTerms = result.expandedTerms as string[] | undefined;
 
   // No banner for direct matches (stage 1).
-  if (!expanded && !fallback) return null;
+  if (!fallback) return null;
 
   return (
-    <div
-      className={cn(
-        "flex items-start gap-2 border-b border-border/40 px-3 py-2 text-xs",
-        expanded
-          ? "bg-primary/5"
-          : "bg-amber-500/5",
-      )}
-    >
-      {expanded ? (
-        <Sparkles className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
-      ) : (
-        <Search className="mt-0.5 h-3 w-3 shrink-0 text-amber-500" />
-      )}
+    <div className="flex items-start gap-2 border-b border-border/40 bg-amber-500/5 px-3 py-2 text-xs">
+      <Search className="mt-0.5 h-3 w-3 shrink-0 text-amber-500" />
       <div className="min-w-0 flex-1">
-        <p className={cn("font-medium", expanded ? "text-primary" : "text-amber-600 dark:text-amber-400")}>
-          {expanded ? "Semantic match" : "Fallback results"}
+        <p className="font-medium text-amber-600 dark:text-amber-400">
+          Fallback results
         </p>
         {note && <p className="mt-0.5 text-muted-foreground">{note}</p>}
-        {expandedTerms && expandedTerms.length > 0 && (
-          <div className="mt-1.5 flex flex-wrap gap-1">
-            {expandedTerms.map((term) => (
-              <span
-                key={term}
-                className="rounded border border-primary/30 bg-primary/10 px-1.5 py-0 font-mono text-[9px] text-primary"
-              >
-                {term}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );

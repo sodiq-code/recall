@@ -71,18 +71,15 @@ export interface FactResult {
  * query — retrieve relevant facts from the user's memory vault.
  *
  * Calls POST /api/memory/query with the natural-language query + optional
- * tag filters. Uses the three-stage semantic search pipeline:
- *   1. Substring + tag match
- *   2. LLM query expansion (e.g. "hobbies" → finds "rock climbing")
- *   3. Recent-facts fallback (never returns empty)
+ * tag filters. Uses two-stage search:
+ *   1. Substring + tag match (query string matched against content AND tags)
+ *   2. Recent-facts fallback (never returns empty)
  *
  * Returns the matching facts + metadata about which stage produced them.
  */
 export async function queryHandler(input: QueryInput): Promise<{
   facts: FactResult[];
   count: number;
-  expanded?: boolean;
-  expandedTerms?: string[];
   fallback?: boolean;
   note?: string;
 }> {
