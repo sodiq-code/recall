@@ -68,3 +68,4 @@ prompt
 # mini-services node_modules (the realtime service ships its own package.json)
 /mini-services/*/node_modules
 .env*
+recall-demo.mp4
