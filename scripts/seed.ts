@@ -7,6 +7,7 @@
  * Run with: `bun run scripts/seed.ts`
  */
 import { createClient } from "@libsql/client";
+import { createHash } from "node:crypto";
 
 const DB_URL = process.env.DATABASE_URL ?? "file:/home/z/my-project/db/custom.db";
 const client = createClient({ url: DB_URL });
@@ -87,13 +88,29 @@ async function seed() {
     return;
   }
 
-  // Insert demo facts.
-  for (const fact of DEMO_FACTS) {
+  // Insert demo facts + a matching audit entry per fact (staggered timestamps).
+  const now = Date.now();
+  for (let i = 0; i < DEMO_FACTS.length; i++) {
+    const fact = DEMO_FACTS[i];
     const factId = crypto.randomUUID();
+    // Stagger creation times over the past 7 days for a realistic timeline.
+    const ageMinutes = Math.floor(i * 90 + Math.random() * 60);
+    const createdAt = new Date(now - ageMinutes * 60 * 1000);
+    const createdIso = createdAt.toISOString().replace("T", " ").replace("Z", "");
+
     await client.execute({
       sql: `INSERT INTO Fact (id, userId, content, source, sourceOrigin, capabilityTokenId, relevanceScore, createdAt, updatedAt)
-            VALUES (?, ?, ?, ?, 'recall.app', NULL, ?, datetime('now'), datetime('now'))`,
-      args: [factId, DEV_USER_ID, fact.content, fact.source, Math.floor(Math.random() * 5)],
+            VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?)`,
+      args: [
+        factId,
+        DEV_USER_ID,
+        fact.content,
+        fact.source,
+        fact.source === "agent" ? "chatgpt.com" : "recall.app",
+        Math.floor(Math.random() * 5),
+        createdIso,
+        createdIso,
+      ],
     });
     for (const tag of fact.tags) {
       await client.execute({
@@ -101,7 +118,37 @@ async function seed() {
         args: [crypto.randomUUID(), factId, tag],
       });
     }
+
+    // Append a matching audit entry (addFact) so the activity feed has history.
+    const auditId = crypto.randomUUID();
+    const argsJson = JSON.stringify({ content: fact.content, tags: fact.tags });
+    const resultHash = createHash("sha256")
+      .update(JSON.stringify({ id: factId }))
+      .digest("hex");
+    await client.execute({
+      sql: `INSERT INTO AuditEntry (id, userId, timestamp, callerOrigin, toolName, argsJson, resultCount, resultHash, capabilityTokenId, signature)
+            VALUES (?, ?, ?, ?, 'addFact', ?, 1, ?, NULL, 'seed')`,
+      args: [auditId, DEV_USER_ID, createdIso, fact.source === "agent" ? "chatgpt.com" : "recall.app", argsJson, resultHash],
+    });
+
     console.log(`  ✓ Fact: "${fact.content.slice(0, 50)}…" [${fact.tags.join(", ")}]`);
+  }
+
+  // Also add a couple of "query" audit entries to show tool-call activity.
+  const queryEntries = [
+    { query: "preferences", ts: now - 30 * 60 * 1000 },
+    { query: "schedule", ts: now - 10 * 60 * 1000 },
+  ];
+  for (const q of queryEntries) {
+    const qIso = new Date(q.ts).toISOString().replace("T", " ").replace("Z", "");
+    const qArgs = JSON.stringify({ query: q.query });
+    const qHash = createHash("sha256").update(qArgs).digest("hex");
+    await client.execute({
+      sql: `INSERT INTO AuditEntry (id, userId, timestamp, callerOrigin, toolName, argsJson, resultCount, resultHash, capabilityTokenId, signature)
+            VALUES (?, ?, ?, 'chatgpt.com', 'query', ?, 2, ?, NULL, 'seed')`,
+      args: [crypto.randomUUID(), DEV_USER_ID, qIso, qArgs, qHash],
+    });
+    console.log(`  ✓ Audit: query "${q.query}"`);
   }
 
   // Ensure a PermissionState row exists (all tools enabled by default).

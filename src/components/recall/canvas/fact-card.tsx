@@ -12,6 +12,7 @@ import {
   User,
   RotateCcw,
   Tag as TagIcon,
+  Copy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -177,13 +178,21 @@ export function FactCard({ fact }: FactCardProps) {
   }
 
   return (
-    <div className="group relative rounded-xl border border-border/60 bg-card/50 p-4 transition-all hover:border-border hover:shadow-sm">
+    <div
+      className={cn(
+        "group relative overflow-hidden rounded-xl border border-border/60 bg-card/50 p-4 transition-all hover:border-border hover:shadow-sm",
+        "before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:transition-colors",
+        fact.source === "agent"
+          ? "before:bg-accent-foreground/50"
+          : "before:bg-primary/50",
+      )}
+    >
       {/* Source indicator */}
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <span
             className={cn(
-              "flex h-5 w-5 items-center justify-center rounded-md",
+              "flex h-5 w-5 items-center justify-center rounded-md transition-transform group-hover:scale-110",
               fact.source === "agent"
                 ? "bg-accent/15 text-accent-foreground"
                 : "bg-primary/10 text-primary",
@@ -216,8 +225,24 @@ export function FactCard({ fact }: FactCardProps) {
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7"
+                onClick={() => {
+                  navigator.clipboard?.writeText(fact.content).then(
+                    () => toast.success("Fact copied to clipboard"),
+                    () => {},
+                  );
+                }}
+                aria-label="Copy fact content"
+                title="Copy"
+              >
+                <Copy className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
                 onClick={() => setIsEditing(true)}
                 aria-label="Edit fact"
+                title="Edit"
               >
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
@@ -228,6 +253,7 @@ export function FactCard({ fact }: FactCardProps) {
                     size="icon"
                     className="h-7 w-7 text-muted-foreground hover:text-destructive"
                     aria-label="Forget fact"
+                    title="Forget"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
@@ -314,7 +340,7 @@ export function FactCard({ fact }: FactCardProps) {
                 <Badge
                   key={tag}
                   variant="secondary"
-                  className="px-1.5 py-0 font-mono text-[10px] text-muted-foreground"
+                  className="px-1.5 py-0 font-mono text-[10px] text-muted-foreground transition-colors hover:bg-muted/60"
                 >
                   {tag}
                 </Badge>
@@ -324,6 +350,10 @@ export function FactCard({ fact }: FactCardProps) {
           <div className="mt-2 flex items-center gap-1 text-[10px] text-muted-foreground/60">
             <Clock className="h-2.5 w-2.5" />
             <span>{formatRelative(fact.updatedAt)}</span>
+            <span className="ml-1 font-mono opacity-50">·</span>
+            <span className="font-mono opacity-60" title="Fact ID">
+              {fact.id.slice(0, 6)}
+            </span>
           </div>
         </>
       )}

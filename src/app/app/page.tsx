@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Reveal } from "@/components/recall/landing/motion-primitives";
 import { RealtimeStatus } from "@/components/recall/canvas/realtime-status";
 import { MemoryCanvas } from "@/components/recall/canvas/memory-canvas";
+import { MemoryInsights } from "@/components/recall/canvas/memory-insights";
 import { WebMCPBridge } from "@/components/recall/canvas/webmcp-bridge";
 import { WebMCPTestPanel } from "@/components/recall/canvas/webmcp-test-panel";
 import { ActivityFeed } from "@/components/recall/canvas/activity-feed";
@@ -128,6 +129,15 @@ export default async function AppPage() {
               </ErrorBoundary>
             </Reveal>
           </div>
+
+          {/* Memory insights dashboard */}
+          <Reveal delay={0.18}>
+            <div className="mt-6">
+              <ErrorBoundary label="the insights dashboard">
+                <MemoryInsights />
+              </ErrorBoundary>
+            </div>
+          </Reveal>
 
           {/* WebMCP tool-call simulator */}
           <Reveal delay={0.2}>
