@@ -1,5 +1,4 @@
 // Recall — Prisma schema
-// Data model per Section 24.1 of the WebMCP Grand Prize Blueprint.
 //
 // Note on storage: SQLite (the dev database) does not support native arrays
 // or Set types, so list/set fields (tags, scope, enabledTools, grantedOrigins)
@@ -7,14 +6,14 @@
 // The production target (Vercel Postgres) restores native array columns; the
 // JSON envelope is kept intentionally so the access layer is portable.
 //
-// Entities (per blueprint §24.1):
+// Entities:
 //   - User            one per OAuth subject
 //   - Fact            one per user fact (soft-deletable)
 //   - FactTag         normalized tag rows (a fact's tags)
 //   - AuditEntry      one per agent action (append-only, signed)
 //   - CapabilityToken one per agent session (short-TTL, audience-scoped)
 //   - PermissionState one per user (per-tool enable + granted origins)
-//   - Session         server-side session store (auth, demo-day cookie sessions)
+//   - Session         server-side session store
 
 generator client {
   provider        = "prisma-client-js"
@@ -29,7 +28,7 @@ datasource db {
 
 model User {
   id            String   @id @default(cuid())
-  // OAuth provider: "github" for demo (demo-day substitute for ChatGPT OAuth),
+  // OAuth provider: "github" for sign-in today.
   // "chatgpt" once third-party ChatGPT OAuth is GA, "google" reserved.
   oauthProvider String
   // The OAuth provider's stable subject identifier.
@@ -65,7 +64,7 @@ model Fact {
   // (e.g. "chatgpt.com"). Provenance anchor for the audit trail.
   sourceOrigin       String
   capabilityTokenId  String?
-  // Frequency-based relevance score (blueprint §23.3). Incremented on query
+  // Frequency-based relevance score. Incremented on query
   // hits, decremented on rollback. Never derived by an LLM.
   relevanceScore     Int      @default(0)
   createdAt          DateTime @default(now())
@@ -126,7 +125,7 @@ model CapabilityToken {
   // JSON array of granted tool names (subset of the six tools).
   scopeJson String
   issuedAt  DateTime  @default(now())
-  // Short TTL — 60-300s per blueprint §24.1.
+  // Short TTL — 60-300s.
   expiresAt DateTime
   revokedAt DateTime?
 
@@ -148,8 +147,8 @@ model PermissionState {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// Server-side session store for the demo-day cookie sessions (GitHub OAuth
-// substitute for ChatGPT OAuth). Keeps auth state out of the JWT/cookie body.
+// Server-side session store for cookie sessions (GitHub OAuth
+// for sign-in today). Keeps auth state out of the JWT/cookie body.
 model Session {
   id        String   @id @default(cuid())
   userId    String

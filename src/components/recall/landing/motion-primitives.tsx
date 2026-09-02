@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
  * Three small, composable wrappers used across the landing sections to give
  * the page a tasteful "fade-up on scroll" rhythm. They are deliberately
  * restrained: 0.5s ease-out, ~16px offset, no spring physics, no parallax. The
- * goal is "this feels premium" — not "this is a demo reel".
+ * goal is "this feels premium" — restrained, not flashy.
  *
  * Accessibility:
  *   - Each primitive calls `useReducedMotion()`; when the user has requested

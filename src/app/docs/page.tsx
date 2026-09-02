@@ -152,8 +152,7 @@ export default function DocsPage() {
 
           <div className="mt-12 rounded-xl border border-border/60 bg-muted/30 p-5">
             <p className="text-sm text-muted-foreground">
-              The full architecture, the day-by-day build log, and the rejected
-              alternatives are documented in the repository README.
+              The full architecture and rejected alternatives are documented in the repository README.
             </p>
             <Link
               href="https://github.com/sodiq-code/recall"

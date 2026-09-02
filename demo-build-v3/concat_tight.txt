@@ -1,4 +1,0 @@
-file 'beat1_settings_off.mp4'
-file 'beat2_tight.mp4'
-file 'beat3_tight.mp4'
-file 'beat4_success.mp4'

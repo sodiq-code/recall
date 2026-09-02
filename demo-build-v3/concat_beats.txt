@@ -1,4 +1,0 @@
-file 'beat1_settings_off.mp4'
-file 'beat2_blocked.mp4'
-file 'beat3_settings_on.mp4'
-file 'beat4_success.mp4'

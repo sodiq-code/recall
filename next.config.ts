@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
         // `tools` directive exposes them to the granted agent origins
         // (https://chatgpt.com). This is the cross-origin grant that lets
         // ChatGPT's agent runtime call Recall's tools through the page's
-        // existing sandbox (blueprint §17, §21.1).
+        // browser sandbox.
         source: "/app",
         headers: [
           {

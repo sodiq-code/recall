@@ -186,7 +186,7 @@ annotations so the agent knows how it may use it.
 - **[Tailwind CSS 4](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/)** — accessible, composable primitives
 - **[Turso](https://turso.tech/) (libSQL)** — edge-replicated SQLite database (works on Vercel serverless AND locally)
 - **[socket.io](https://socket.io/)** — real-time WebSocket fan-out (mini-service)
-- **[GitHub OAuth](https://docs.github.com/en/apps/oauth-building-authentication-apps)** — substitute for ChatGPT OAuth
+- **[GitHub OAuth](https://docs.github.com/en/apps/oauth-building-authentication-apps)** — sign-in (native ChatGPT OAuth on the roadmap)
 - **[WebCrypto](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API)** — capability tokens + signed audit log
 - **[TanStack Query](https://tanstack.com/query/latest)** — client-side data fetching with optimistic updates
 - **[GitHub Actions](https://github.com/features/actions)** — lint · typecheck · build on every PR
@@ -253,8 +253,9 @@ bun run db:generate # regenerate the Prisma client (for types)
 ```
 
 To push the schema to Turso, use the `@libsql/client` to apply the DDL (the
-Prisma CLI can't push directly to libSQL — see the task-2 worklog entry for
-the exact command).
+Prisma CLI can't push directly to libSQL). The `scripts/seed.ts` file shows
+the pattern — it uses `createClient({ url, authToken })` and executes raw
+`CREATE TABLE` statements.
 
 ### Develop
 
@@ -360,7 +361,7 @@ mini-services/
   is a reference architecture for user-controlled agent memory on the web.
 - **Creativity & Ambition** — the architectural inversion (website as
   subject, agent as client) is a category anchor competitors are unlikely to
-  replicate in the build window. The killer interaction — user disables a
+  replicate. The killer interaction — user disables a
   tool in Settings and the agent is immediately blocked from calling it —
   demonstrates WebMCP as **user governance over agent capability**, not just
   "AI controlling a website."

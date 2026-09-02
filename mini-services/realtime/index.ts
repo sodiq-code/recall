@@ -8,7 +8,7 @@ import { Server, type Socket } from "socket.io";
  * connects via `io("/?XTransformPort=3003")` so the Caddy gateway routes
  * the connection to this service.
  *
- * Architecture (blueprint §21.1, §32 Day 5):
+ * Architecture:
  *   1. The frontend connects and joins a per-user room (`user:<userId>`)
  *      so events can be fanned out only to that user's open tabs.
  *   2. When a WebMCP tool call (or a user mutation) appends an audit entry,

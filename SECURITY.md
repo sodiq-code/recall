@@ -48,10 +48,9 @@ variable at boot and fails loudly in production when one is missing.
 
 ## Authentication notes
 
-- GitHub OAuth is the substitute for ChatGPT OAuth (third-party
-  ChatGPT OAuth is not GA). This trade-off is documented in the README and
-  on the `/login` page; the production plan swaps in ChatGPT OAuth when it
-  ships to third parties.
+- Recall uses GitHub OAuth for sign-in today. Native ChatGPT OAuth for
+  third-party apps is on the roadmap — once available, Recall will offer
+  a native ChatGPT connection alongside GitHub.
 - The capability-token flow is enforced server-side even when the
   `permissions-policy: tools` header is unavailable, so the security model
   does not depend on a single browser feature.

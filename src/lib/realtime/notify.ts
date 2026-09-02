@@ -16,8 +16,7 @@
  * The /emit endpoint is authenticated with a shared secret (REALTIME_SECRET)
  * so only the Next.js backend can emit. The helper is fire-and-forget: if the
  * mini-service is unreachable, the audit entry is still persisted in Turso
- * (the feed will pick it up on the next poll/refetch). This is the blueprint
- * fallback: "poll /api/audit every 2s if WebSocket fails."
+ * (the feed will pick it up on the next poll/refetch).
  */
 
 const REALTIME_PORT = process.env.REALTIME_PORT ?? "3003";

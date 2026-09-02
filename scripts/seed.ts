@@ -9,7 +9,7 @@
 import { createClient } from "@libsql/client";
 import { createHash } from "node:crypto";
 
-const DB_URL = process.env.DATABASE_URL ?? "file:/home/z/my-project/db/custom.db";
+const DB_URL = process.env.DATABASE_URL ?? "file:./db/custom.db";
 const client = createClient({ url: DB_URL });
 
 const DEV_USER_ID = "dev-user-local";

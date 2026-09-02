@@ -65,8 +65,19 @@ prompt
 /skills
 /.zscripts
 /tool-results
+
 # mini-services node_modules (the realtime service ships its own package.json)
 /mini-services/*/node_modules
-.env*
+
+# internal build artifacts (not for submission)
+worklog.md
+demo-build/
+demo-build-v3/
 recall-demo.mp4
+recall-demo-v2.mp4
+recall-demo-v3.mp4
+start-dev.sh
+*_output.txt
+verify_*.mjs
+analyze_recall*.mjs
 *.mov

@@ -17,9 +17,9 @@ import { env } from "@/lib/env";
  * short-lived cookie, and verified on callback. This prevents an attacker
  * from injecting their own authorization code into the user's session.
  *
- * GitHub OAuth is the substitute for ChatGPT OAuth:
- * third-party ChatGPT OAuth is not available. The README and /login page document
- * this trade-off; the production plan swaps in ChatGPT OAuth when it ships.
+ * Recall uses GitHub OAuth for sign-in today. Native ChatGPT OAuth for
+ * third-party apps is on the roadmap — once available, Recall will offer
+ * a native ChatGPT connection alongside GitHub.
  */
 
 const STATE_COOKIE = "recall_oauth_state";

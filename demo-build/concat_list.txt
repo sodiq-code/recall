@@ -1,7 +1,0 @@
-file 'norm_part1a.mp4'
-file 'norm_cutaway1_with_audio.mp4'
-file 'norm_part1b.mp4'
-file 'norm_part2_new_query_with_audio.mp4'
-file 'norm_part3a.mp4'
-file 'norm_cutaway2_with_audio.mp4'
-file 'norm_part3b.mp4'

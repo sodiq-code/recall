@@ -14,10 +14,9 @@ import { authConfigured } from "@/lib/env";
  * The sign-in page. A single primary action: "Continue with GitHub". The
  * button hits /api/auth/oauth/github which starts the GitHub OAuth flow.
  *
- * GitHub OAuth is the substitute
- * for ChatGPT OAuth. The note is
- * shown directly on the page so judges understand the trade-off. The
- * production plan swaps in ChatGPT OAuth when it ships to third parties.
+ * Recall uses GitHub OAuth for sign-in today. Native ChatGPT OAuth for
+ * third-party apps is on the roadmap — once available, Recall will offer
+ * a native ChatGPT connection alongside GitHub.
  *
  * Error handling: if GitHub redirected back with ?error=..., we show a
  * friendly message explaining the failure. This is a server component so we
