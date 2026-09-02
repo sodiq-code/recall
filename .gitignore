@@ -69,3 +69,4 @@ prompt
 /mini-services/*/node_modules
 .env*
 recall-demo.mp4
+*.mov
