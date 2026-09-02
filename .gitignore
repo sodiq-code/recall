@@ -81,3 +81,4 @@ start-dev.sh
 verify_*.mjs
 analyze_recall*.mjs
 *.mov
+.env*
