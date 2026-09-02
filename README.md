@@ -49,10 +49,10 @@ subject, the agent is the consumer:
 | **Who owns the memory** | The agent platform | **The user** |
 
 The website **is** the memory. The agent **is** the consumer. The browser is
-the trust boundary. The capability token is the authorization credential. The audit log is
-the receipt. The user remains in control of every capability.
+the trust boundary. The capability token is the authorization credential. The
+audit log is the receipt. The user remains in control of every capability.
 
-## See WebMCP actually working
+## See WebMCP working
 
 The full agent ↔ website relationship, end-to-end:
 
@@ -68,12 +68,12 @@ The full agent ↔ website relationship, end-to-end:
 6. **Inspect the signed audit event** — every tool call is appended to an
    immutable, ECDSA-signed audit log.
 7. **Disable the `addFact` tool** in Settings → the capability token's scope
-   is instantly narrowed.
-8. **Ask ChatGPT to remember again** → **blocked.** The agent cannot call a
-   tool the user has disabled. Re-enable it to restore access.
+   is narrowed.
+8. **Ask ChatGPT to remember again** → the call is rejected. The agent
+   cannot invoke a tool the user has disabled. Re-enable it to restore
+   access.
 
-That demonstrates something more powerful than six tools: **agent capability
-+ user governance.**
+This demonstrates agent capability combined with user governance.
 
 > **Try it without ChatGPT.** The interactive
 > [Tool Playground](https://recall-app-one.vercel.app/playground) (`/playground`)
@@ -85,39 +85,38 @@ That demonstrates something more powerful than six tools: **agent capability
 
 ## What makes Recall different
 
-### 1. Memory Insights — a real product, not a protocol demo
+### 1. Memory Insights dashboard
 
 Recall renders a dashboard that visualizes your memory vault at a glance:
 total facts, source breakdown (you vs agent), top tags, a 7-day activity
 sparkline, and per-tool call distribution. This is the same data ChatGPT
-sees — just made visible to the human who owns it.
+sees — made visible to the human who owns it.
 
-### 2. Search that never fails silently
+### 2. Search with graceful fallback
 
 The `query` tool searches both fact content **and** tags (OR condition). When
-there's no match, Recall falls back to your most recent facts with a clear
-note — *"No facts match 'hobbies'. Showing your 5 most recent facts."* The
-agent never gets a mysterious empty state.
+there's no match, Recall returns your most recent facts with a clear note —
+*"No facts match 'hobbies'. Showing your 5 most recent facts."* The agent
+never receives an empty result.
 
 ### 3. Cryptographically verifiable audit
 
-Every agent action leaves signed evidence. The flow:
+Every agent action produces a signed record. The flow:
 
 ```
 tool call → signed event (ECDSA P-256) → immutable audit record
          → exportable as JWS bundle → independently verifiable without the database
 ```
 
-The audit log is the receipt you check ChatGPT's claims against. Export it
+The audit log is the receipt you verify ChatGPT's claims against. Export it
 from `/app/settings` and verify the signature with the included public key —
 no trust in the database required.
 
-### 4. User governance — the killer interaction
+### 4. Per-tool permission controls
 
-Disable any tool in Settings. The capability token's scope is instantly
-narrowed — the agent cannot call a tool the user has disabled. Re-enable it
-to restore access. This is WebMCP as **user governance over agent
-capability**, not just "AI controlling a website."
+Disable any tool in Settings. The capability token's scope is narrowed —
+the agent cannot invoke a tool the user has disabled. Re-enable it to
+restore access. This is WebMCP as **user governance over agent capability**.
 
 ## The six WebMCP tools
 
@@ -172,10 +171,8 @@ annotations so the agent knows how it may use it.
 
 > **Note on deployment target.** The original architecture targets
 > Cloudflare Workers + Durable Objects for per-user stateful edge storage.
-> This repository ships the sanctioned Vercel-only fallback (validated in
-> our architecture decision: *"Use only Vercel; switch Durable Objects
-> to Vercel Postgres"*). State lives in Turso (libSQL); the WebSocket fan-out
-> runs as a dedicated mini-service.
+> This repository ships the Vercel-only fallback. State lives in Turso
+> (libSQL); the WebSocket fan-out runs as a dedicated mini-service.
 
 ## The stack
 
@@ -203,7 +200,7 @@ write that state.
 
 | Boundary | What it enforces |
 | --- | --- |
-| **TLS origin** | Tools are published only from `recall.app` (or its preview). An attacker cannot impersonate the origin without the private key. |
+| **TLS origin** | Tools are published only from the site's own TLS origin. An attacker cannot impersonate the origin without the private key. |
 | **Browser sandbox** | Tool handlers execute in the page's existing sandbox. There is no out-of-band channel to the backend. |
 | **`fromOrigins` grant** | Tools are exposed only to the agent origins the user grants (default: `https://chatgpt.com`). |
 | **Capability token** | Every tool call presents a short-TTL (60–300s), audience-restricted, scope-limited token signed with the user's site key. |
@@ -333,37 +330,32 @@ mini-services/
 
 ## Technical highlights
 
-### What this project demonstrates
+### WebMCP features exercised
 
-- **WebMCP Leverage** — exercises nine distinct WebMCP features: imperative
-  tool registration (`document.modelContext.registerTool()`), the six-tool
-  surface, `readOnlyHint`, `untrustedContentHint`, `fromOrigins` cross-origin
-  grant (via the `Permissions-Policy: tools=(https://chatgpt.com)` header),
-  browser-mediated session, audit-log integration, capability-token
-  authentication, and declarative form annotation (the add-fact form is both
-  an HTML form and a WebMCP tool via the `data-mcp-tool` attribute). The
-  interactive `/playground` and the in-app Agent tool-call simulator let
-  judges explore the full tool surface hands-on without ChatGPT.
-- **Execution** — a complete, coherent product experience, not a technical
-  proof of concept: sign-up, memory canvas with CRUD + tag search + smart
-  fallback, Memory Insights dashboard, real-time activity feed with WebSocket
-  fan-out, per-tool permissions with live capability-token scoping, signed
-  audit export as JWS, and a settings page — all in one repo, deployed and
-  live.
-- **Potential Impact** — ChatGPT users are the initial target market, but
-  the broader opportunity is every conversational AI agent that needs
-  persistent, user-trusted memory. As AI agents take more autonomous
-  actions, regulators are moving toward auditability requirements (e.g. the
-  EU AI Act's transparency obligations for high-risk AI systems). Recall's
-  inversion — the website as the memory boundary, not the agent platform —
-  is a reference architecture for user-controlled agent memory on the web.
-- **Creativity & Ambition** — the architectural inversion (website as
-  subject, agent as client) gives Recall a distinct position: the website
-  becomes the memory boundary, while the agent becomes the consumer. The
-  killer interaction — user disables a
-  tool in Settings and the agent is immediately blocked from calling it —
-  demonstrates WebMCP as **user governance over agent capability**, not just
-  "AI controlling a website."
+- Imperative tool registration (`document.modelContext.registerTool()`)
+- Six-tool surface with `readOnlyHint` / `untrustedContentHint` annotations
+- `fromOrigins` cross-origin grant via `Permissions-Policy: tools=(self https://chatgpt.com)`
+- Browser-mediated session reuse
+- Audit-log integration
+- Capability-token authentication (short-TTL, ECDSA-signed, scope-limited)
+- Declarative form annotation (`data-mcp-tool` attribute on the add-fact form)
+
+### Product completeness
+
+Sign-up, memory canvas with CRUD + tag search + fallback, Memory Insights
+dashboard, real-time activity feed with WebSocket fan-out, per-tool
+permissions with live capability-token scoping, signed audit export as JWS,
+and a settings page — all in one repository, deployed and live.
+
+### Architecture and impact
+
+The architectural inversion (website as subject, agent as client) gives
+Recall a distinct position: the website becomes the memory boundary, while
+the agent becomes the consumer. ChatGPT users are the initial target market;
+the broader opportunity is any conversational AI agent that needs persistent,
+user-trusted memory. As AI agents take more autonomous actions, regulators
+are moving toward auditability requirements (e.g. the EU AI Act's
+transparency obligations for high-risk AI systems).
 
 ## License
 
