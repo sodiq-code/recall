@@ -18,8 +18,6 @@ Recall is a user-controlled memory layer for AI agents, implemented as a
 in a website you can inspect, edit, and revoke — not in a hidden database
 controlled by the platform.
 
-Built for [The WebMCP Challenge](https://webmcp.devpost.com/) (OpenAI / Devpost).
-
 **Live app:** [recall-app-one.vercel.app](https://recall-app-one.vercel.app)
 **Demo video:** [youtu.be/Wyy71D72m3s](https://youtu.be/Wyy71D72m3s) (2:16)
 
@@ -333,7 +331,7 @@ mini-services/
   ci.yml                 # lint + typecheck + build on every push/PR
 ```
 
-## How Recall maps to the judging criteria
+## Technical highlights
 
 ### What this project demonstrates
 
