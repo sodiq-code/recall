@@ -14,9 +14,9 @@
 > memory a controlled interface the agent must use.**
 
 Recall is a user-controlled memory layer for AI agents, implemented as a
-[WebMCP](https://webmcp.devpost.com/) website. Instead of making memory an
-opaque capability of the agent, Recall makes memory a web capability the
-user can inspect, edit, audit, and revoke.
+WebMCP website. Instead of making memory an opaque capability of the agent,
+Recall makes memory a web capability the user can inspect, edit, audit, and
+revoke.
 
 **Live app:** [recall-app-one.vercel.app](https://recall-app-one.vercel.app)
 **Demo video:** [youtu.be/Wyy71D72m3s](https://youtu.be/Wyy71D72m3s) (2:16)
