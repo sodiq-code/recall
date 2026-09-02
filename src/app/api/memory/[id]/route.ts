@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth/api";
+import { requireUser, requireToolEnabled } from "@/lib/auth/api";
 import {
   getFact,
   updateFact,
@@ -40,6 +40,9 @@ export async function PATCH(
 ) {
   const auth = await requireUser();
   if (!auth.ok) return auth.response;
+
+  const toolAuth = await requireToolEnabled(auth.user, "updateFact");
+  if (!toolAuth.ok) return toolAuth.response;
 
   const { id } = await params;
   let body: { content?: string; tags?: string[] };
@@ -95,6 +98,9 @@ export async function DELETE(
 ) {
   const auth = await requireUser();
   if (!auth.ok) return auth.response;
+
+  const toolAuth = await requireToolEnabled(auth.user, "forgetFact");
+  if (!toolAuth.ok) return toolAuth.response;
 
   const { id } = await params;
   const fact = await forgetFact(auth.user.id, id);

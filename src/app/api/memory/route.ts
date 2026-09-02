@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth/api";
+import { requireUser, requireToolEnabled } from "@/lib/auth/api";
 import {
   createFact,
   listFacts,
@@ -54,6 +54,9 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const auth = await requireUser();
   if (!auth.ok) return auth.response;
+
+  const toolAuth = await requireToolEnabled(auth.user, "addFact");
+  if (!toolAuth.ok) return toolAuth.response;
 
   let body: { content?: string; tags?: string[] };
   try {

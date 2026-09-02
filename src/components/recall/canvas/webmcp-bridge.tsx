@@ -1,18 +1,49 @@
 "use client";
 
 import * as React from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   registerWebMCPTools,
   isWebMCPSupported,
 } from "@/lib/webmcp";
 import { RECALL_TOOLS } from "@/lib/webmcp/recall-tools";
+import { type ToolName } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
+/**
+ * Recall — WebMCP bridge.
+ *
+ * Registers Recall's six WebMCP tools with the browser when a signed-in user
+ * opens /app. Only the enabled tools are registered — the bridge fetches the
+ * user's permission state and filters the tool set. When the user toggles a
+ * tool in Settings and returns to /app, the bridge re-registers with the new
+ * set.
+ */
+
 type RegistrationState = "unsupported" | "registering" | "registered" | "failed";
+
+interface PermissionState {
+  userId: string;
+  enabledTools: ToolName[];
+  grantedOrigins: string[];
+  updatedAt: number;
+}
 
 export function WebMCPBridge() {
   const [state, setState] = React.useState<RegistrationState>("registering");
+  const [registeredCount, setRegisteredCount] = React.useState(0);
+
+  const { data: permData } = useQuery<{ state: PermissionState }>({
+    queryKey: ["permissions"],
+    queryFn: async () => {
+      const res = await fetch("/api/permissions");
+      if (!res.ok) throw new Error("Failed to load permissions");
+      return res.json();
+    },
+  });
+
+  const enabledTools = permData?.state?.enabledTools ?? [];
 
   React.useEffect(() => {
     if (!isWebMCPSupported()) {
@@ -20,18 +51,25 @@ export function WebMCPBridge() {
       return;
     }
 
+    const toolsToRegister = enabledTools.length > 0
+      ? RECALL_TOOLS.filter((t) => enabledTools.includes(t.name as ToolName))
+      : RECALL_TOOLS;
+
+    if (toolsToRegister.length === 0) {
+      setState("registered");
+      setRegisteredCount(0);
+      return;
+    }
+
     let cancelled = false;
     setState("registering");
 
-    const result = registerWebMCPTools({
-      tools: RECALL_TOOLS,
-    });
+    const result = registerWebMCPTools({ tools: toolsToRegister });
 
     result.ready
       .then(() => {
         if (cancelled) return;
-        // The diagnostic page proved all 6 tools register successfully.
-        // Show "registered" state — the badge displays a fixed "6/6".
+        setRegisteredCount(toolsToRegister.length);
         setState("registered");
       })
       .catch(() => {
@@ -43,8 +81,9 @@ export function WebMCPBridge() {
       cancelled = true;
       result.unregister();
     };
-  }, []);
+  }, [enabledTools.join(",")]);
 
+  const totalTools = enabledTools.length || 6;
   const config = {
     unsupported: {
       label: "WebMCP unavailable",
@@ -57,9 +96,9 @@ export function WebMCPBridge() {
       title: "Registering tools…",
     },
     registered: {
-      label: "6/6 tools live",
+      label: `${registeredCount}/${totalTools} tools live`,
       className: "border-primary/30 bg-primary/10 text-primary",
-      title: "All 6 WebMCP tools are registered and available to your agent.",
+      title: `${registeredCount} of ${totalTools} WebMCP tools are registered and available to your agent.`,
     },
     failed: {
       label: "Registration failed",
@@ -75,7 +114,7 @@ export function WebMCPBridge() {
       title={config.title}
     >
       <span className="relative flex h-1.5 w-1.5">
-        {state === "registered" && (
+        {state === "registered" && registeredCount > 0 && (
           <>
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
@@ -89,6 +128,9 @@ export function WebMCPBridge() {
         )}
         {state === "failed" && (
           <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-destructive" />
+        )}
+        {state === "registered" && registeredCount === 0 && (
+          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-muted-foreground" />
         )}
       </span>
       {config.label}

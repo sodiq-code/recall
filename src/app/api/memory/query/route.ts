@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth/api";
+import { requireUser, requireToolEnabled } from "@/lib/auth/api";
 import { queryFacts, listFacts } from "@/lib/memory";
 import { appendAuditEntry } from "@/lib/audit";
 
@@ -23,6 +23,9 @@ import { appendAuditEntry } from "@/lib/audit";
 export async function POST(request: Request) {
   const auth = await requireUser();
   if (!auth.ok) return auth.response;
+
+  const toolAuth = await requireToolEnabled(auth.user, "query");
+  if (!toolAuth.ok) return toolAuth.response;
 
   let body: { query?: string; tags?: string[]; limit?: number };
   try {
