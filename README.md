@@ -36,9 +36,9 @@ memory was used in a given response.
 **Make memory a website.**
 
 Recall takes WebMCP's spec topology seriously and ships the **inversion** as
-the product. Every prior MCP app had the agent as the subject — the agent
-calls servers. Recall makes the **website the subject** and the **agent the
-consumer**:
+the product. Most MCP architectures put the agent at the center: the agent
+calls servers. Recall inverts that relationship — the website is the
+subject, the agent is the consumer:
 
 | | Prior MCP apps | Recall |
 | --- | --- | --- |
@@ -49,7 +49,7 @@ consumer**:
 | **Who owns the memory** | The agent platform | **The user** |
 
 The website **is** the memory. The agent **is** the consumer. The browser is
-the trust boundary. The capability token is the credential. The audit log is
+the trust boundary. The capability token is the authorization credential. The audit log is
 the receipt. The user remains in control of every capability.
 
 ## See WebMCP actually working
@@ -358,8 +358,9 @@ mini-services/
   inversion — the website as the memory boundary, not the agent platform —
   is a reference architecture for user-controlled agent memory on the web.
 - **Creativity & Ambition** — the architectural inversion (website as
-  subject, agent as client) is a category anchor competitors are unlikely to
-  replicate. The killer interaction — user disables a
+  subject, agent as client) gives Recall a distinct position: the website
+  becomes the memory boundary, while the agent becomes the consumer. The
+  killer interaction — user disables a
   tool in Settings and the agent is immediately blocked from calling it —
   demonstrates WebMCP as **user governance over agent capability**, not just
   "AI controlling a website."

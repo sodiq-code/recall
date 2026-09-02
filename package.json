@@ -2,7 +2,7 @@
   "name": "recall",
   "version": "0.1.0",
   "private": true,
-  "description": "Recall — the first transparent, controllable memory layer for your ChatGPT agent, built natively on WebMCP.",
+  "description": "Recall — a transparent, controllable memory layer for your ChatGPT agent, built natively on WebMCP.",
   "license": "MIT",
   "scripts": {
     "dev": "next dev -p 3000 2>&1 | tee dev.log",
