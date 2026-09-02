@@ -1,7 +1,7 @@
 # Recall
 
 [![Live Demo](https://img.shields.io/badge/live-recall--app--one.vercel.app-success?style=flat-square)](https://recall-app-one.vercel.app)
-[![Demo Video](https://img.shields.io/badge/demo-YouTube-FF0000?style=flat-square&logo=youtube&logoColor=white)](https://youtu.be/fhaVsGfYaks)
+[![Demo Video](https://img.shields.io/badge/demo-YouTube-FF0000?style=flat-square&logo=youtube&logoColor=white)](https://youtu.be/Wyy71D72m3s)
 [![Next.js 16](https://img.shields.io/badge/Next.js_16-000000?style=flat-square&logo=nextdotjs&logoColor=white)](https://nextjs.org)
 [![WebMCP](https://img.shields.io/badge/WebMCP-6A4C93?style=flat-square)](https://webmcp.devpost.com)
 [![TypeScript](https://img.shields.io/badge/TypeScript_5-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
@@ -21,7 +21,7 @@ controlled by the platform.
 Built for [The WebMCP Challenge](https://webmcp.devpost.com/) (OpenAI / Devpost).
 
 **Live app:** [recall-app-one.vercel.app](https://recall-app-one.vercel.app)
-**Demo video:** [youtu.be/fhaVsGfYaks](https://youtu.be/fhaVsGfYaks) (1:59)
+**Demo video:** [youtu.be/Wyy71D72m3s](https://youtu.be/Wyy71D72m3s) (2:16)
 
 ---
 
